@@ -8,10 +8,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
+
+    private static final int PORT = 25000;
+
     public static void main(String[] args)
     {
         // Read the configuration file.
-        Overlay overlay = new Overlay("config.json");
+        System.out.println("Reading config file...");
+        Overlay overlay = new Overlay("target/classes/config.json");
+        System.out.println("Config file processed successfully!");
 
         // Get number of nodes: all and critical.
         int criticalNodes = overlay.getCriticalNodes();
@@ -22,7 +27,7 @@ public class Main {
         // Connect with all the nodes
         try
         {
-            ServerSocket ss = new ServerSocket(25000);
+            ServerSocket ss = new ServerSocket(PORT);
             while (criticalNodes > 0)
             {
                 Socket nodeConnection = ss.accept();

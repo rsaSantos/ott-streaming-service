@@ -13,7 +13,7 @@ import java.util.*;
 // Class that stores the config.json information
 public class Overlay {
 
-    private static String UNDEFINED_ID = "UNDEFINED";
+    private static final String UNDEFINED_ID = "UNDEFINED";
     private List<Pair<String, List<String>>> origin;
     private Map<String, List<List<String>>> neighbours;
     private List<String> criticalNodesID;

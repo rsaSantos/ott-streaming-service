@@ -1,21 +1,23 @@
 [
     {
-        "id": "1",
+        "ID": "1",
+        "Critical": true,
         "Origin": [
             "localhost"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.20.1"
             ]
         ]
     },
     {
-        "id": "2",
+        "ID": "2",
+        "Critical": true,
         "Origin": [
             "10.0.20.1"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.20.10"
             ],
@@ -33,13 +35,14 @@
         ]
     },
     {
-        "id": "3",
+        "ID": "3",
+        "Critical": true,
         "Origin": [
             "10.0.19.1",
             "10.0.15.2",
             "10.0.11.2"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.19.2",
                 "10.0.18.2"
@@ -55,11 +58,12 @@
         ]
     },
     {
-        "id": "4",
+        "ID": "4",
+        "Critical": true,
         "Origin": [
             "10.0.12.20"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.11.2",
                 "10.0.15.2",
@@ -68,13 +72,14 @@
         ]
     },
     {
-        "id": "5",
+        "ID": "5",
+        "Critical": true,
         "Origin": [
             "10.0.5.1",
             "10.0.6.1",
             "10.0.0.2"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.11.2",
                 "10.0.15.2",
@@ -100,13 +105,14 @@
         ]
     },
     {
-        "id": "6",
+        "ID": "6",
+        "Critical": true,
         "Origin": [
             "10.0.0.1",
             "10.0.1.1",
             "10.0.2.1"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.0.2",
                 "10.0.5.1",
@@ -124,14 +130,15 @@
         ]
     },
     {
-        "id": "7",
+        "ID": "7",
+        "Critical": true,
         "Origin": [
             "10.0.16.1",
             "10.0.13.2",
             "10.0.9.2",
             "10.0.7.2"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.18.2",
                 "10.0.19.2"
@@ -152,44 +159,48 @@
         ]
     },
     {
-        "id": "8",
+        "ID": "8",
+        "Critical": true,
         "Origin": [
             "10.0.17.21"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.17.1"
             ]
         ]
     },
     {
-        "id": "9",
+        "ID": "9",
+        "Critical": true,
         "Origin": [
             "10.0.3.20"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.3.1"
             ]
         ]
     },
     {
-        "id": "10",
+        "ID": "10",
+        "Critical": true,
         "Origin": [
             "10.0.4.20"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.4.1"
             ]
         ]
     },
     {
-        "id": "11",
+        "ID": "11",
+        "Critical": true,
         "Origin": [
             "10.0.4.21"
         ],
-        "Neighbors": [
+        "Neighbours": [
             [
                 "10.0.4.1"
             ]

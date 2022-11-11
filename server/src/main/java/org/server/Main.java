@@ -4,6 +4,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,9 +15,9 @@ public class Main {
     public static void main(String[] args)
     {
         // Read the configuration file.
-        System.out.println("Reading config file...");
+        System.out.println("[" + LocalDateTime.now().toString() + "]: Reading config file...");
         Overlay overlay = new Overlay("target/classes/config.json");
-        System.out.println("Config file processed successfully!");
+        System.out.println("[" + LocalDateTime.now().toString() + "]: Config file processed successfully!");
 
         // Get number of nodes: all and critical.
         int criticalNodes = overlay.getCriticalNodes();
@@ -32,10 +33,10 @@ public class Main {
             {
                 Socket nodeConnection = ss.accept();
                 String address = nodeConnection.getInetAddress().getHostAddress();
-                System.out.println("Node " + address + " has connected.");
+                System.out.println("Node " + "[\u001B[32m" + address + "\u001B[0m] has connected.");
                 DataOutputStream outputStream = overlay.sendAdjacents(nodeConnection);
                 connectedNodes.add(new Pair<>(nodeConnection, outputStream));
-                System.out.println("Sent adjacent list to node " + address + ".");
+                System.out.println("Sent adjacent list to node " + "[\u001B[32m" + address + "\u001B[0m].");
 
                 if (overlay.isCritical(address))
                     criticalNodes--;

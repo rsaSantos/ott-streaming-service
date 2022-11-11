@@ -91,8 +91,7 @@ public class Overlay {
         if(!id.equals(UNDEFINED_ID))
         {
             String adjacents = getAdjacents(id);
-            System.out.println(adjacents);
-
+            
             try
             {
                 out  = new DataOutputStream(nodeConnection.getOutputStream());
@@ -105,7 +104,7 @@ public class Overlay {
         }
         else
         {
-            System.out.println(UNDEFINED_ID + " at " + address + ".");
+            System.out.println(UNDEFINED_ID + " at " + "[\033[0;31m" + address + "\u001B[0m].");
         }
 
         return out;

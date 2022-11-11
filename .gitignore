@@ -1,6 +1,11 @@
 server/.idea/*
 onode/.idea/*
 client/.idea/*
-client/client.iml
-onode/onode.iml
+
 server/Server.iml
+onode/onode.iml
+client/client.iml
+
+server/target/*
+onode/target/*
+client/target/*

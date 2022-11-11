@@ -14,7 +14,7 @@ import java.util.List;
 public class Main
 {
     private static final String BOOTSTRAPPER_IP = "10.0.20.10";
-    private static final int PORT = 25000;
+    private static final int PORT = 25000 + 1;
 
     private static void getAdjacents(List<String> adjacents)
     {

@@ -112,19 +112,17 @@ public class Overlay {
 
     private String getNodeID(String address)
     {
-        String id = UNDEFINED_ID;
         for (Pair<String, List<String>> node : this.origin)
         {
             for (String nodeAddress : node.getSecond())
             {
                 if (nodeAddress.equals(address))
                 {
-                    id = node.getFirst();
-                    break;
+                    return node.getFirst();
                 }
             }
         }
-        return id;
+        return UNDEFINED_ID;
     }
 
     private String getAdjacents(String id)

@@ -35,11 +35,19 @@ public class Main {
                 String address = nodeConnection.getInetAddress().getHostAddress();
                 System.out.println("Node " + "[\u001B[32m" + address + "\u001B[0m] has connected.");
                 DataOutputStream outputStream = overlay.sendAdjacents(nodeConnection);
-                connectedNodes.add(new Pair<>(nodeConnection, outputStream));
-                System.out.println("Sent adjacent list to node " + "[\u001B[32m" + address + "\u001B[0m].");
-
+                
+                if(outputStream != null)
+                {
+                    connectedNodes.add(new Pair<>(nodeConnection, outputStream));
+                    System.out.println("Sent adjacent list to node " + "[\u001B[32m" + address + "\u001B[0m].");
+                }
+                else
+                {
+                    System.out.println("Adjacent list not sent to node " + "[\033[0;31m" + address + "\u001B[0m].");
+                }
+                
                 if (overlay.isCritical(address))
-                    criticalNodes--;
+                    criticalNodes--;                
             }
 
             // TODO (EXTRA): CRITICAL VS NON-CRITICAL NODES

@@ -16,87 +16,108 @@ public class Main
     private static final String BOOTSTRAPPER_IP = "10.0.20.10";
     private static final int PORT = 25000 + 1;
 
-    private static void getAdjacents(List<String> adjacents)
+    private static List<String> getAdjacents()
     {
+        List<String> adjacents = new ArrayList<>();
         try
         {
             // Establish connection to server
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Connecting to server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: Connecting to server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m]...");
             Socket bt = new Socket(BOOTSTRAPPER_IP, 25000);
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Connected to server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: Connected to server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m].");
 
             // Opening reading method from server conection
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Opening DataInputStream to server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: Opening DataInputStream to server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m]...");
             DataInputStream in = new DataInputStream(bt.getInputStream());
-            System.out.println("[" + LocalDateTime.now().toString() + "]: DataInputStream to server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: DataInputStream to server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m] up and running.");
 
             // Reading information
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Receiving adjacent list from server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: Receiving adjacent list from server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m]...");
             String ips = in.readUTF();
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Adjacent list from server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: Adjacent list from server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m] received.");
 
             // Process adjacent list
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Processing adjacent list...");
+            System.out.println("[" + LocalDateTime.now() + "]: Processing adjacent list...");
             String[] ip_list = ips.split(",");
 
             Collections.addAll(adjacents, ip_list);
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Adjacent list processed. Result: " + adjacents.toString());
+            System.out.println("[" + LocalDateTime.now() + "]: Adjacent list processed. Result: " + adjacents.toString());
 
+            // Reading the closing message...
             in.readUTF();
 
             // Close reading stream
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Closing DataInputStream to server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: Closing DataInputStream to server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m]...");
             in.close();
-            System.out.println("[" + LocalDateTime.now().toString() + "]: DataInputStream to server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: DataInputStream to server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m] successfully closed.");
 
             // Terminate the connection with server
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Terminating connection with server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: Terminating connection with server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m]...");
             bt.close();
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Connection with server [\u001B[32m"
+            System.out.println("[" + LocalDateTime.now() + "]: Connection with server [\u001B[32m"
                     + BOOTSTRAPPER_IP
                     + "\u001B[0m] successfully terminated.");
 
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
+            adjacents.clear();
             e.printStackTrace();
         }
+
+        return adjacents;
     }
 
     public static void main(String[] args)
     {
-        List<String> adjacents = new ArrayList<>();
+            try {
 
-        try
-        {
-            System.out.println("[" + LocalDateTime.now().toString() + "]: Openening TCP server socket...");
-            ServerSocket ss = new ServerSocket(PORT);
-            System.out.println("[" + LocalDateTime.now().toString() + "]: TCP server socket up and running at port " + PORT + ".");
+                System.out.println("[" + LocalDateTime.now() + "]: Openening TCP server socket...");
+                ServerSocket serverSocket = new ServerSocket(PORT);
+                System.out.println("[" + LocalDateTime.now() + "]: TCP server socket up and running at port " + PORT + ".");
 
-            getAdjacents(adjacents);
+                NodeListenerTCP nodeListenerTCP = new NodeListenerTCP(serverSocket);
 
-            ss.close();
+                // Get adjacents nodes IP's.
+                List<String> adjacents = getAdjacents();
 
-        } catch (Exception e)
-        {
-            e.printStackTrace();
-        }
+                // Open connections with all the neighbours.
+                for (String address : adjacents)
+                {
+                    System.out.println("[" + LocalDateTime.now() + "]: Creating node connection instance...");
+                    NodeConnectionTCP nodeConnection = new NodeConnectionTCP(address, PORT);
+                    nodeConnection.run();
+                    System.out.println("[" + LocalDateTime.now() + "]: Node connection up and running.");
+                }
+
+                System.out.println("[" + LocalDateTime.now() + "]: Main thread going to sleep...");
+                Thread.sleep(Long.MAX_VALUE);
+
+                System.out.println("[" + LocalDateTime.now() + "]: Closing the server socket...");
+                serverSocket.close();
+                System.out.println("[" + LocalDateTime.now() + "]: Server socket closed.");
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
     }
 }

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.*;
 
 
@@ -104,7 +105,7 @@ public class Overlay {
         }
         else
         {
-            System.out.println(UNDEFINED_ID + " at " + "[\033[0;31m" + address + "\u001B[0m].");
+            System.out.println("[" + LocalDateTime.now() + "]: " + UNDEFINED_ID + " at " + "[\033[0;31m" + address + "\u001B[0m].");
         }
 
         return out;

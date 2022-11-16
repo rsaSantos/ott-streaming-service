@@ -1,0 +1,45 @@
+package org.onode;
+
+import java.net.ServerSocket;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class NodeListener implements Runnable
+{
+    private final ServerSocket serverSocket;
+    private final List<NodeConnectionTCP> connectionsTCP;
+
+    public NodeListener(ServerSocket serverSocket, List<NodeConnectionTCP> connectionsTCP)
+    {
+        this.serverSocket = serverSocket;
+        this.connectionsTCP = connectionsTCP;
+    }
+
+    @Override
+    public void run()
+    {
+        this.createShutdownHook();
+        for(NodeConnectionTCP nodeConnectionTCP : this.connectionsTCP)
+        {
+            String address = nodeConnectionTCP.getAddress();
+            System.out.println("[" + LocalDateTime.now() + "]: Creating thread for address[\u001B[32m" + address + "\u001B[0m].");
+            Thread thread = new Thread(nodeConnectionTCP, address);
+            System.out.println("[" + LocalDateTime.now() + "]: Thread created with ID='" + thread.getName() + "'.");
+            thread.start();
+        }
+    }
+
+    private void createShutdownHook()
+    {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                this.connectionsTCP.forEach(NodeConnectionTCP::closeConnection);
+                this.serverSocket.close();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        }));
+    }
+}

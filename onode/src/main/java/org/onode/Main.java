@@ -16,10 +16,6 @@ public class Main
     private static final String BOOTSTRAPPER_IP = "10.0.20.10";
     private static final int PORT = 25000 + 1;
 
-    private static ServerSocket serverSocket = null;
-
-    private static final List<NodeConnectionTCP> nodeConnections = new ArrayList<>();
-
     private static List<String> getAdjacents()
     {
         List<String> adjacents = new ArrayList<>();
@@ -92,61 +88,36 @@ public class Main
 
     public static void main(String[] args)
     {
-        // This handler will be called on Control-C pressed
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                try {
-                    nodeConnections.forEach(NodeConnectionTCP::closeConnection);
-                    if(serverSocket != null)
-                        serverSocket.close();
-                }
-                catch (Exception e)
-                {
-                    e.printStackTrace();
-                }
-            }
-        });
+        try {
 
-            try {
+            System.out.println("[" + LocalDateTime.now() + "]: Openening TCP server socket...");
+            ServerSocket serverSocket = new ServerSocket(PORT);
+            System.out.println("[" + LocalDateTime.now() + "]: TCP server socket up and running at port " + PORT + ".");
 
-                System.out.println("[" + LocalDateTime.now() + "]: Openening TCP server socket...");
-                serverSocket = new ServerSocket(PORT);
-                System.out.println("[" + LocalDateTime.now() + "]: TCP server socket up and running at port " + PORT + ".");
+            // Get adjacents nodes IP's.
+            List<String> adjacents = getAdjacents();
 
-                // Get adjacents nodes IP's.
-                List<String> adjacents = getAdjacents();
-
-                // Open connections with all the neighbours.
-                for (String address : adjacents)
-                {
-                    System.out.println("[" + LocalDateTime.now() + "]: Connecting to [\u001B[32m" + address + "\u001B[0m]..." );
-                    nodeConnections.add(new NodeConnectionTCP(address, PORT));
-                    System.out.println("[" + LocalDateTime.now() + "]: Connected to [\u001B[32m" + address + "\u001B[0m]." );
-                }
-
-                ///////////////////////////////////////////////////////////////////////////
-                // From here on, this thread focus on listening to other nodes requests. //
-                ///////////////////////////////////////////////////////////////////////////
-
-                for(NodeConnectionTCP nodeConnectionTCP : nodeConnections)
-                {
-                    Thread thread = new Thread(nodeConnectionTCP);
-                    thread.start();
-                }
-
-                // TODO: Stop criteria?
-
-
-                System.out.println("[" + LocalDateTime.now() + "]: Main thread going to sleep...");
-                Thread.sleep(Long.MAX_VALUE);
-
-                System.out.println("[" + LocalDateTime.now() + "]: Closing the server socket...");
-                serverSocket.close();
-                System.out.println("[" + LocalDateTime.now() + "]: Server socket closed.");
-            }
-            catch (Exception e)
+            // Open connections with all the neighbours.
+            List<NodeConnectionTCP> nodeConnections = new ArrayList<>();
+            for (String address : adjacents)
             {
-                e.printStackTrace();
+                System.out.println("[" + LocalDateTime.now() + "]: Connecting to [\u001B[32m" + address + "\u001B[0m]..." );
+                nodeConnections.add(new NodeConnectionTCP(address, PORT));
+                System.out.println("[" + LocalDateTime.now() + "]: Connected to [\u001B[32m" + address + "\u001B[0m]." );
             }
+
+            System.out.println("[" + LocalDateTime.now() + "]: Running node listener on main thread...");
+            NodeListener nodeListener = new NodeListener(serverSocket, nodeConnections);
+            nodeListener.run();
+            System.out.println("[" + LocalDateTime.now() + "]: Node listener ended.");
+
+            System.out.println("[" + LocalDateTime.now() + "]: Closing the server socket...");
+            serverSocket.close();
+            System.out.println("[" + LocalDateTime.now() + "]: Server socket closed.");
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 }

@@ -27,6 +27,17 @@ public class NodeListener implements Runnable
             System.out.println("[" + LocalDateTime.now() + "]: Thread created with ID='" + thread.getName() + "'.");
             thread.start();
         }
+
+        // If the thread is not blocked, the socket will be closed...
+        try
+        {
+            // Sleeping for 292 billion years...should be enough.
+            Thread.sleep(Long.MAX_VALUE);
+        }
+        catch (InterruptedException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 
     private void createShutdownHook()

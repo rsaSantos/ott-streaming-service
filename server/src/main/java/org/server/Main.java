@@ -33,17 +33,17 @@ public class Main {
             {
                 Socket nodeConnection = ss.accept();
                 String address = nodeConnection.getInetAddress().getHostAddress();
-                System.out.println("Node " + "[\u001B[32m" + address + "\u001B[0m] has connected.");
+                System.out.println("[" + LocalDateTime.now() + "]: Node " + "[\u001B[32m" + address + "\u001B[0m] has connected.");
                 DataOutputStream outputStream = overlay.sendAdjacents(nodeConnection);
                 
                 if(outputStream != null)
                 {
                     connectedNodes.add(new Pair<>(nodeConnection, outputStream));
-                    System.out.println("Sent adjacent list to node " + "[\u001B[32m" + address + "\u001B[0m].");
+                    System.out.println("[" + LocalDateTime.now() + "]: Sent adjacent list to node " + "[\u001B[32m" + address + "\u001B[0m].");
                 }
                 else
                 {
-                    System.out.println("Adjacent list not sent to node " + "[\033[0;31m" + address + "\u001B[0m].");
+                    System.out.println("[" + LocalDateTime.now() + "]: Adjacent list not sent to node " + "[\033[0;31m" + address + "\u001B[0m].");
                 }
                 
                 if (overlay.isCritical(address))

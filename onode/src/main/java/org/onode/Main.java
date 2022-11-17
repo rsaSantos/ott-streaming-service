@@ -13,8 +13,8 @@ import java.util.List;
  */
 public class Main
 {
-    private static final String BOOTSTRAPPER_IP = "10.0.20.10";
-    private static final int PORT = 25000 + 1;
+    public static final String BOOTSTRAPPER_IP = "10.0.20.10";
+    public static final int PORT = 25000 + 1;
 
     private static List<String> getAdjacents()
     {
@@ -105,6 +105,10 @@ public class Main
                 nodeConnections.add(new NodeConnectionTCP(address, PORT));
                 System.out.println("[" + LocalDateTime.now() + "]: Connected to [\u001B[32m" + address + "\u001B[0m]." );
             }
+        
+
+            // TODO: CREATE UDP THREAD
+
 
             System.out.println("[" + LocalDateTime.now() + "]: Running node listener on main thread...");
             NodeListener nodeListener = new NodeListener(serverSocket, nodeConnections);

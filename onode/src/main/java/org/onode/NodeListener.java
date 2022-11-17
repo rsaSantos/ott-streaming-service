@@ -31,8 +31,10 @@ public class NodeListener implements Runnable
         // If the thread is not blocked, the socket will be closed...
         try
         {
-            // TODO: Reading packets here! 
+            // TODO: Reading packets here!
             // Interpret and add to respective thread queue.
+
+            // wait for connections with .accept() -> move to main
 
 
             // Sleeping for 292 billion years...should be enough.

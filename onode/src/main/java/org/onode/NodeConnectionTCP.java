@@ -18,6 +18,7 @@ public class NodeConnectionTCP implements Runnable
     public void run()
     {
         try {
+            // TODO: Wait for packets in queue.
             while(!nodeSocket.isClosed())
             {
                 System.out.println("[" + LocalDateTime.now() + "]: Connection with address[\u001B[32m" + this.getAddress() + "\u001B[0m] is open. Sleeping for 5s...");

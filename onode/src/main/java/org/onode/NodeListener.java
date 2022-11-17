@@ -31,6 +31,10 @@ public class NodeListener implements Runnable
         // If the thread is not blocked, the socket will be closed...
         try
         {
+            // TODO: Reading packets here! 
+            // Interpret and add to respective thread queue.
+
+
             // Sleeping for 292 billion years...should be enough.
             Thread.sleep(Long.MAX_VALUE);
         }
@@ -43,7 +47,8 @@ public class NodeListener implements Runnable
     private void createShutdownHook()
     {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
+            try
+            {
                 this.connectionsTCP.forEach(NodeConnectionTCP::closeConnection);
                 this.serverSocket.close();
             }

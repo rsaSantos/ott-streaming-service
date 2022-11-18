@@ -1,12 +1,15 @@
 package org.onode;
 
+import org.onode.control.NodeReaderTCP;
+import org.onode.control.NodeListener;
+
 import java.io.DataInputStream;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * Node
@@ -94,29 +97,30 @@ public class Main
             ServerSocket serverSocket = new ServerSocket(PORT);
             System.out.println("[" + LocalDateTime.now() + "]: TCP server socket up and running at port " + PORT + ".");
 
+            // TODO: Streaming? Where to handle? Another thread? NodeListener?
+            System.out.println("[" + LocalDateTime.now() + "]: Creating UDP socket...");
+            DatagramSocket datagramSocket = new DatagramSocket(PORT);
+            System.out.println("[" + LocalDateTime.now() + "]: UDP socket created and bound to port " + PORT + ".");
+
             // Get adjacents nodes IP's.
             List<String> adjacents = getAdjacents();
 
             // Open connections with all the neighbours.
-            List<NodeConnectionTCP> nodeConnections = new ArrayList<>();
+            Map<String, Socket> nodeNeighboursSockets = new HashMap<>();
             for (String address : adjacents)
             {
                 System.out.println("[" + LocalDateTime.now() + "]: Connecting to [\u001B[32m" + address + "\u001B[0m]..." );
-                nodeConnections.add(new NodeConnectionTCP(address, PORT));
+                nodeNeighboursSockets.put(address, new Socket(InetAddress.getByName(address), PORT));
                 System.out.println("[" + LocalDateTime.now() + "]: Connected to [\u001B[32m" + address + "\u001B[0m]." );
             }
-        
-
-            // TODO: CREATE UDP THREAD
-
 
             System.out.println("[" + LocalDateTime.now() + "]: Running node listener on main thread...");
-            NodeListener nodeListener = new NodeListener(serverSocket, nodeConnections);
-            nodeListener.run();
-            System.out.println("[" + LocalDateTime.now() + "]: Node listener ended.");
+            NodeListener nodeListener = new NodeListener(serverSocket, nodeNeighboursSockets);
+            nodeListener.run(); // TODO: Sequential? Depends on the streaming...
+            System.out.println("[" + LocalDateTime.now() + "]: Node listener exited.");
 
             System.out.println("[" + LocalDateTime.now() + "]: Closing the server socket...");
-            serverSocket.close();
+            if(!serverSocket.isClosed()) serverSocket.close();
             System.out.println("[" + LocalDateTime.now() + "]: Server socket closed.");
         }
         catch (Exception e)

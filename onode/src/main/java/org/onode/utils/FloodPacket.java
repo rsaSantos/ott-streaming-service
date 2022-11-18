@@ -1,4 +1,4 @@
-package org.onode;
+package org.onode.utils;
 
 import org.exceptions.PacketFormatException;
 

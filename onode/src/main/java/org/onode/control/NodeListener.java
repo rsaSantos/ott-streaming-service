@@ -6,36 +6,48 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class NodeListener implements Runnable
 {
     public static final String DELETE_ME = "8D3rL2=E?2T.-E!"; // Some random string
+    public static final String START_FLOOD = "START FLOOD";
+
     private final ServerSocket serverSocket;
     private final Map<String, Socket> nodeNeighboursSockets;
 
     private final Map<String, Thread> readerThreadsMap;
     private final Map<String, NodeReaderTCP> readerTCPMap;
-    private final Map<String, NodeWriterTCP> writerTCPMap;
+    private final Map<String, DataOutputStream> outputStreamMap;
 
     private final Condition isReadDataAvailable;
+    private final ExecutorService threadPoolExecutor;
 
-    public NodeListener(ServerSocket serverSocket, Map<String, Socket> nodeNeighboursSockets)
+    public NodeListener(
+            ServerSocket serverSocket,
+            Map<String, Socket> nodeNeighboursSockets,
+            int corePoolSize,
+            int maxPoolSize,
+            int maxQueuedTasks)
     {
         this.serverSocket = serverSocket;
         this.nodeNeighboursSockets = nodeNeighboursSockets;
         this.readerTCPMap = new HashMap<>();
-        this.writerTCPMap = new HashMap<>();
+        this.outputStreamMap = new HashMap<>();
         this.readerThreadsMap = new HashMap<>();
 
         // TODO: Thread pool for writing tasks ? Create pre-defined number of threads?
         this.isReadDataAvailable = new ReentrantLock().newCondition();
+
+        threadPoolExecutor = new ThreadPoolExecutor(
+                corePoolSize,
+                maxPoolSize,
+                5,
+                TimeUnit.SECONDS,
+                new ArrayBlockingQueue<>(maxQueuedTasks));
     }
 
     // Run sequentially (in main thread).
@@ -59,11 +71,10 @@ public class NodeListener implements Runnable
                 NodeReaderTCP nodeReaderTCP = new NodeReaderTCP(this.isReadDataAvailable, new DataInputStream(socket.getInputStream()), address);
                 this.readerTCPMap.put(address, nodeReaderTCP);
 
-                NodeWriterTCP nodeWriterTCP = new NodeWriterTCP(new DataOutputStream(socket.getOutputStream()), address);
-                writerTCPMap.put(address, nodeWriterTCP);
+                this.outputStreamMap.put(address, new DataOutputStream(socket.getOutputStream()));
 
                 Thread readingThread = new Thread(nodeReaderTCP, "read_" + address);
-                readerThreadsMap.put(address, readingThread);
+                this.readerThreadsMap.put(address, readingThread);
                 System.out.println("[" + LocalDateTime.now() + "]: Reading thread created with ID='\u001B[32m" + readingThread.getName() + "\u001B[0m'.");
 
                 System.out.println("[" + LocalDateTime.now() + "]: Starting reading thread...");
@@ -100,6 +111,7 @@ public class NodeListener implements Runnable
                         else
                         {
                             // TODO: Add task for thread pool.
+                            this.threadPoolExecutor.execute(new NodeTask());
                         }
                     }
                 }
@@ -123,10 +135,20 @@ public class NodeListener implements Runnable
             this.readerThreadsMap.remove(address);
             this.readerTCPMap.remove(address);
 
-            NodeWriterTCP nw = this.writerTCPMap.get(address);
-            this.writerTCPMap.remove(address);
-            if(nw != null)
-                nw.closeOutputStream(false);
+            DataOutputStream dos = this.outputStreamMap.get(address);
+            if(dos != null)
+            {
+                try
+                {
+                    dos.close();
+                }
+                catch (IOException e)
+                {
+                    System.err.println("Error closing output stream for address [" + address + "].");
+                    e.printStackTrace();
+                }
+            }
+            this.outputStreamMap.remove(address);
 
             try
             {
@@ -158,9 +180,19 @@ public class NodeListener implements Runnable
                     readerTCPEntry.getValue().closeInputStream();
                 }
 
-                for(Map.Entry<String, NodeWriterTCP> writerTCPEntry : this.writerTCPMap.entrySet())
+                for(Map.Entry<String, DataOutputStream> dosEntry : this.outputStreamMap.entrySet())
                 {
-                    writerTCPEntry.getValue().closeOutputStream(true);
+                    try
+                    {
+                        DataOutputStream dos = dosEntry.getValue();
+                        dos.flush();
+                        dos.writeUTF(DELETE_ME);
+                        dos.close();
+                    }
+                    catch (IOException e)
+                    {
+                        e.printStackTrace();
+                    }
                 }
 
                 for(Map.Entry<String, Socket> socketEntry : this.nodeNeighboursSockets.entrySet())

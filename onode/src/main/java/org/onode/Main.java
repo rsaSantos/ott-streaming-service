@@ -114,8 +114,19 @@ public class Main
                 System.out.println("[" + LocalDateTime.now() + "]: Connected to [\u001B[32m" + address + "\u001B[0m]." );
             }
 
+            // Hyperparameters for thread pool
+            System.out.println("[" + LocalDateTime.now() + "]: Setting hyper parameters for thread pool...");
+            int maxPoolSize = Math.max(adjacents.size(), 2);
+            int corePoolSize = 2;
+            int maxQueuedTasks = 128;
+            System.out.println("--------------------------------");
+            System.out.println("maxPoolSize    = " + maxPoolSize);
+            System.out.println("corePoolSize   = " + corePoolSize);
+            System.out.println("maxQueuedTasks = " + maxQueuedTasks);
+            System.out.println("--------------------------------");
+
             System.out.println("[" + LocalDateTime.now() + "]: Running node listener on main thread...");
-            NodeListener nodeListener = new NodeListener(serverSocket, nodeNeighboursSockets);
+            NodeListener nodeListener = new NodeListener(serverSocket, nodeNeighboursSockets,corePoolSize,maxPoolSize,maxQueuedTasks);
             nodeListener.run(); // TODO: Sequential? Depends on the streaming...
             System.out.println("[" + LocalDateTime.now() + "]: Node listener exited.");
 

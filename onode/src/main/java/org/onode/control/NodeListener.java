@@ -17,7 +17,8 @@ public class NodeListener implements Runnable
     public static final String START_FLOOD = "START FLOOD";
 
     private final ServerSocket serverSocket;
-    private final Map<String, Socket> nodeNeighboursSockets;
+    private final Map<String, Socket> readingSocketsMap;
+    private final Map<String, Socket> writingSocketsMap;
 
     private final Map<String, Thread> readerThreadsMap;
     private final Map<String, NodeReaderTCP> readerTCPMap;
@@ -28,13 +29,15 @@ public class NodeListener implements Runnable
 
     public NodeListener(
             ServerSocket serverSocket,
-            Map<String, Socket> nodeNeighboursSockets,
+            Map<String, Socket> readingSocketsMap,
+            Map<String, Socket> writingSocketsMap,
             int corePoolSize,
             int maxPoolSize,
             int maxQueuedTasks)
     {
         this.serverSocket = serverSocket;
-        this.nodeNeighboursSockets = nodeNeighboursSockets;
+        this.readingSocketsMap = readingSocketsMap;
+        this.writingSocketsMap = writingSocketsMap;
         this.readerTCPMap = new HashMap<>();
         this.outputStreamMap = new HashMap<>();
         this.readerThreadsMap = new HashMap<>();
@@ -59,19 +62,20 @@ public class NodeListener implements Runnable
         this.createShutdownHook();
 
         // Setup reading threads/instances and writing instances.
-        for(Map.Entry<String, Socket> socketEntry : this.nodeNeighboursSockets.entrySet())
+        for(Map.Entry<String, Socket> socketEntry : this.readingSocketsMap.entrySet())
         {
             String address = socketEntry.getKey();
-            Socket socket = socketEntry.getValue();
+            Socket readingSocket = socketEntry.getValue();
+            Socket writingSocket = this.writingSocketsMap.get(address);
 
             try
             {
                 System.out.println("[" + LocalDateTime.now() + "]: Processing threads for address [\u001B[32m" + address + "\u001B[0m]...");
 
-                NodeReaderTCP nodeReaderTCP = new NodeReaderTCP(this.isReadDataAvailable, new DataInputStream(socket.getInputStream()), address);
+                NodeReaderTCP nodeReaderTCP = new NodeReaderTCP(this.isReadDataAvailable, new DataInputStream(readingSocket.getInputStream()), address);
                 this.readerTCPMap.put(address, nodeReaderTCP);
 
-                this.outputStreamMap.put(address, new DataOutputStream(socket.getOutputStream()));
+                this.outputStreamMap.put(address, new DataOutputStream(writingSocket.getOutputStream()));
 
                 Thread readingThread = new Thread(nodeReaderTCP, "read_" + address);
                 this.readerThreadsMap.put(address, readingThread);
@@ -152,10 +156,15 @@ public class NodeListener implements Runnable
 
             try
             {
-                Socket socket = this.nodeNeighboursSockets.get(address);
-                if(socket != null)
+                Socket readingSocket = this.readingSocketsMap.get(address);
+                if(readingSocket != null)
                 {
-                    socket.close();
+                    readingSocket.close();
+                }
+                Socket writingSocket = this.writingSocketsMap.get(address);
+                if(writingSocket != null)
+                {
+                    writingSocket.close();
                 }
             }
             catch (IOException e)
@@ -163,7 +172,8 @@ public class NodeListener implements Runnable
                 System.err.println("Error closing socket to address [" + address + "].");
                 e.printStackTrace();
             }
-            this.nodeNeighboursSockets.remove(address);
+            this.readingSocketsMap.remove(address);
+            this.writingSocketsMap.remove(address);
         }
     }
 
@@ -195,13 +205,19 @@ public class NodeListener implements Runnable
                     }
                 }
 
-                for(Map.Entry<String, Socket> socketEntry : this.nodeNeighboursSockets.entrySet())
+                for(Map.Entry<String, Socket> socketEntry : this.readingSocketsMap.entrySet())
+                {
+                    socketEntry.getValue().close();
+                }
+
+                for(Map.Entry<String, Socket> socketEntry : this.writingSocketsMap.entrySet())
                 {
                     socketEntry.getValue().close();
                 }
 
                 this.readerThreadsMap.clear();
-                this.nodeNeighboursSockets.clear();
+                this.readingSocketsMap.clear();
+                this.writingSocketsMap.clear();
                 this.readerTCPMap.clear();
                 this.readerThreadsMap.clear();
 

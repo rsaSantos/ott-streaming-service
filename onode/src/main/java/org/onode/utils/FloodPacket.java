@@ -17,9 +17,7 @@ public class FloodPacket
     /**
      * Here we assume the packet has ID=1
      * The payload format is: 1;14;timestamp;ip1,ip2,ip3,
-     *
      * TODO: Throw error of format!
-     *
      * */
     public FloodPacket(String payload) throws PacketFormatException
     {

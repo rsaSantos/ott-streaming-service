@@ -1,5 +1,6 @@
 package org.server;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -52,14 +53,37 @@ public class Main {
 
             // TODO (EXTRA): CRITICAL VS NON-CRITICAL NODES
 
+            List<Pair<Socket, DataInputStream>> inputStreams = new ArrayList<>();
             for(Pair<Socket, DataOutputStream> node : connectedNodes)
             {
-                node.getSecond().writeUTF("DONE");
+                node.getSecond().writeUTF("ALL NODES HAVE THE LIST!");
+                inputStreams.add(new Pair<>(node.getFirst(), new DataInputStream(node.getFirst().getInputStream())));
+            }
+
+            // TODO: Sleep for a few seconds while nodes connect to each other?
+
+            while(!inputStreams.isEmpty())
+            {
+                List<Pair<Socket, DataInputStream>> toRemove = new ArrayList<>();
+                for(Pair<Socket, DataInputStream> node : inputStreams)
+                {
+                    if(node.getSecond().available() > 0)
+                    {
+                        node.getSecond().close();
+                        toRemove.add(node);
+                    }
+                }
+                inputStreams.removeAll(toRemove);
+            }
+
+            for(Pair<Socket, DataOutputStream> node : connectedNodes)
+            {
+                node.getSecond().writeUTF("ALL NODES ARE CONNECTED!");
                 node.getSecond().close();
                 node.getFirst().close();
             }
-            connectedNodes.clear();
 
+            connectedNodes.clear();
             ss.close();
         }
         catch (IOException e) {

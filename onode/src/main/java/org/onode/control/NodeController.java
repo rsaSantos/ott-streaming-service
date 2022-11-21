@@ -11,7 +11,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class NodeListener implements Runnable
+public class NodeController implements Runnable
 {
     public static final String DELETE_ME = "8D3rL2=E?2T.-E!"; // Some random string
     public static final String START_FLOOD = "START FLOOD";
@@ -27,7 +27,7 @@ public class NodeListener implements Runnable
     private final Condition isReadDataAvailable;
     private final ExecutorService threadPoolExecutor;
 
-    public NodeListener(
+    public NodeController(
             ServerSocket serverSocket,
             Map<String, Socket> readingSocketsMap,
             Map<String, Socket> writingSocketsMap,

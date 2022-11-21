@@ -48,7 +48,7 @@ public class NodeReaderTCP implements Runnable
                         + this.address + "] received EOF.");
 
                 // Tell node listener to close this socket and exit.
-                this.putToQueue(NodeListener.DELETE_ME);
+                this.putToQueue(NodeController.DELETE_ME);
                 this.closeInputStream();
                 return;
             }
@@ -64,7 +64,7 @@ public class NodeReaderTCP implements Runnable
                 System.err.println("[IOException] Stream has been closed.");
 
                 // Tell node listener to close this socket and exit.
-                this.putToQueue(NodeListener.DELETE_ME);
+                this.putToQueue(NodeController.DELETE_ME);
                 this.closeInputStream();
                 return;
             }

@@ -1,7 +1,7 @@
 package org.onode;
 
 import org.onode.control.ConnectionStarter;
-import org.onode.control.NodeListener;
+import org.onode.control.NodeController;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -124,7 +124,7 @@ public class Main
             // -------------------------------------------------
 
 
-            // TODO: Streaming? Where to handle? Another thread? NodeListener?
+            // TODO: Streaming? Where to handle? Another thread? NodeController?
             System.out.println("[" + LocalDateTime.now() + "]: Creating UDP socket...");
             DatagramSocket datagramSocket = new DatagramSocket(PORT);
             System.out.println("[" + LocalDateTime.now() + "]: UDP socket created and bound to port " + PORT + ".");
@@ -142,8 +142,8 @@ public class Main
             System.out.println("--------------------------------");
 
             System.out.println("[" + LocalDateTime.now() + "]: Running node listener on main thread...");
-            NodeListener nodeListener = new NodeListener(serverSocket, readingSocketsMap, writingSocketsMap,corePoolSize,maxPoolSize,maxQueuedTasks);
-            nodeListener.run(); // TODO: Sequential? Depends on the streaming...
+            NodeController nodeController = new NodeController(serverSocket, readingSocketsMap, writingSocketsMap,corePoolSize,maxPoolSize,maxQueuedTasks);
+            nodeController.run(); // TODO: Sequential? Depends on the streaming...
             System.out.println("[" + LocalDateTime.now() + "]: Node listener exited.");
 
             System.out.println("[" + LocalDateTime.now() + "]: Closing the server socket...");

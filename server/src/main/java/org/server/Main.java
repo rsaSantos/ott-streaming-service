@@ -16,9 +16,9 @@ public class Main {
     public static void main(String[] args)
     {
         // Read the configuration file.
-        System.out.println("[" + LocalDateTime.now().toString() + "]: Reading config file...");
+        System.out.println("[" + LocalDateTime.now() + "]: Reading config file...");
         Overlay overlay = new Overlay("target/classes/config.json");
-        System.out.println("[" + LocalDateTime.now().toString() + "]: Config file processed successfully!");
+        System.out.println("[" + LocalDateTime.now() + "]: Config file processed successfully!");
 
         // Get number of nodes: all and critical.
         int criticalNodes = overlay.getCriticalNodes();
@@ -52,43 +52,63 @@ public class Main {
             }
 
             // TODO (EXTRA): CRITICAL VS NON-CRITICAL NODES
+            System.out.println("[" + LocalDateTime.now() + "]: All nodes have the list of adjacents.");
 
-            List<Pair<Socket, DataInputStream>> inputStreams = new ArrayList<>();
+            List<Pair<Boolean, DataInputStream>> inputStreams = new ArrayList<>();
             for(Pair<Socket, DataOutputStream> node : connectedNodes)
             {
+                System.out.println("[" + LocalDateTime.now() + "]: Informing host with address " + "[\u001B[32m" + node.getFirst().getInetAddress().getHostAddress() + "\u001B[0m].");
                 node.getSecond().writeUTF("ALL NODES HAVE THE LIST!");
-                inputStreams.add(new Pair<>(node.getFirst(), new DataInputStream(node.getFirst().getInputStream())));
+                node.getSecond().flush();
+                inputStreams.add(new Pair<>(true, new DataInputStream(node.getFirst().getInputStream())));
             }
 
             // TODO: Sleep for a few seconds while nodes connect to each other?
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting for nodes to connect to each other...");
 
-            while(!inputStreams.isEmpty())
+            int i = inputStreams.size();
+            while(i > 0)
             {
-                List<Pair<Socket, DataInputStream>> toRemove = new ArrayList<>();
-                for(Pair<Socket, DataInputStream> node : inputStreams)
+                for(Pair<Boolean, DataInputStream> node : inputStreams)
                 {
-                    if(node.getSecond().available() > 0)
+                    if(node.getFirst() && node.getSecond().available() > 0)
                     {
-                        node.getSecond().close();
-                        toRemove.add(node);
+                        node.setFirst(false);
+                        i--;
                     }
                 }
-                inputStreams.removeAll(toRemove);
+            }
+
+            System.out.println("[" + LocalDateTime.now() + "]: All nodes have connected to each other.");
+
+            for(Pair<Socket, DataOutputStream> node : connectedNodes)
+            {
+                System.out.println("[" + LocalDateTime.now() + "]: Informing host with address " + "[\u001B[32m" + node.getFirst().getInetAddress().getHostAddress() + "\u001B[0m].");
+                node.getSecond().writeUTF("ALL NODES ARE CONNECTED!");
+                node.getSecond().flush();
+            }
+
+
+            System.out.println("[" + LocalDateTime.now() + "]: Closing all the connections...");
+            for(Pair<Boolean, DataInputStream> node : inputStreams)
+            {
+                node.getSecond().close();
             }
 
             for(Pair<Socket, DataOutputStream> node : connectedNodes)
             {
-                node.getSecond().writeUTF("ALL NODES ARE CONNECTED!");
                 node.getSecond().close();
                 node.getFirst().close();
             }
 
             connectedNodes.clear();
+            System.out.println("[" + LocalDateTime.now() + "]: Connections closed.");
+
+            System.out.println("[" + LocalDateTime.now() + "]: Closing server...");
             ss.close();
         }
         catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 }

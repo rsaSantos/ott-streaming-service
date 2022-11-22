@@ -1,8 +1,8 @@
 package org.server;
 
 public class Pair<F, S> {
-    private F first; //first member of pair
-    private S second; //second member of pair
+    private F first;
+    private S second;
 
     public Pair(F first, S second) {
         this.first = first;

@@ -6,7 +6,6 @@ import org.onode.control.NodeController;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
@@ -54,11 +53,13 @@ public class Main
 
             System.out.println("[" + LocalDateTime.now() + "]: Write to server (DONE).");
             dos.writeUTF("DONE");
+            dos.flush();
 
             // TODO: Fail safe with timeout handling
-            System.out.println("Waiting for ALL the connections to be made...");
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting for ALL the connections to be made...");
+
             dis.readUTF();
-            System.out.println("ALL the connections were made!");
+            System.out.println("[" + LocalDateTime.now() + "]: ALL the connections were made!");
 
             // Close reading stream
             System.out.println("[" + LocalDateTime.now() + "]: Closing DataInputStream to server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m]...");
@@ -101,6 +102,8 @@ public class Main
             NodeController nodeController = new NodeController(
                     serverSocket,
                     socketMap,
+                    connectionStarter.getInputStreamMap(),
+                    connectionStarter.getOutputStreamMap(),
                     corePoolSize,
                     maxPoolSize,
                     maxQueuedTasks

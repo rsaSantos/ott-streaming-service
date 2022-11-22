@@ -1,4 +1,4 @@
-package org.onode.control;
+package org.onode.control.writer;
 
 
 public class NodeTask implements Runnable

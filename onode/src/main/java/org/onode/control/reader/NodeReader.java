@@ -1,7 +1,6 @@
-package org.onode.control;
+package org.onode.control.reader;
 
-import org.onode.utils.AbstractNodeListener;
-import org.w3c.dom.Node;
+import org.onode.control.NodeController;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -12,11 +11,11 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.time.LocalDateTime;
 
-public class NodeListener<L> extends AbstractNodeListener
+public class NodeReader<L> extends AbstractNodeReader
 {
     private final L listener; // L type is either DataInputStream or ServerSocket
 
-    public NodeListener( L listener, String address) throws SocketException
+    public NodeReader(L listener, String address) throws SocketException
     {
         super(address);
         this.listener = listener;

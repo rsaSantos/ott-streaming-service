@@ -1,11 +1,12 @@
 package org.onode;
 
-import org.onode.control.ConnectionStarter;
 import org.onode.control.NodeController;
+import org.onode.control.starter.StarterListener;
+import org.onode.control.starter.StarterSender;
+import org.onode.utils.Triplet;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
@@ -36,28 +37,53 @@ public class Main
 
             List<String> adjacents = getAdjacents(dis);
 
+            Integer token = new Random().nextInt();
+            System.out.println("[" + LocalDateTime.now() + "]: Generated token [\u001B[32m" + token + "\u001B[0m].");
+
             // Reading the message that signals that all nodes received their adjacent list.
             dis.readUTF();
 
-            System.out.println("[" + LocalDateTime.now() + "]: All nodes received adjacent list. Creating connection starter threads...");
-            ConnectionStarter connectionStarter = new ConnectionStarter(serverSocket, adjacents);
-            connectionStarter.run();
-
-
-            // Get sockets...
-            Map<String, Socket> socketMap = connectionStarter.getSockets();
+            StarterListener starterListener = new StarterListener(serverSocket, adjacents, token);
+            Thread starterListenerThread = new Thread(starterListener);
+            starterListenerThread.start();
 
             System.out.println("[" + LocalDateTime.now() + "]: Opening DataOutputStream to server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m]...");
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
             System.out.println("[" + LocalDateTime.now() + "]: DataOutputStream to server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m] up and running.");
 
-            System.out.println("[" + LocalDateTime.now() + "]: Write to server (DONE).");
-            dos.writeUTF("DONE");
+
+            System.out.println("[" + LocalDateTime.now() + "]: Inform server we are waiting for neighbours to connect....");
+            dos.writeUTF("LISTENING");
             dos.flush();
 
-            // TODO: Fail safe with timeout handling
-            System.out.println("[" + LocalDateTime.now() + "]: Waiting for ALL the connections to be made...");
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting for permission to start sending requests...");
+            dis.readUTF();
+            System.out.println("[" + LocalDateTime.now() + "]: Starting to send requests...");
 
+            StarterSender starterSender = new StarterSender(adjacents, token);
+            starterSender.run();
+
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting for listener thread...");
+            starterListenerThread.join();
+
+            // TODO: Get final list of streams...
+            Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> listenerConnectionDataMap = starterListener.getConnectionDataMap();
+            Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> senderConnectionDataMap = starterSender.getConnectionDataMap();
+
+            // Merge these maps...
+            Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> connectionDataMap = new HashMap<>();
+            connectionDataMap.putAll(listenerConnectionDataMap);
+            connectionDataMap.putAll(senderConnectionDataMap);
+
+            // Clear old maps
+            listenerConnectionDataMap.clear();
+            senderConnectionDataMap.clear();
+
+            System.out.println("[" + LocalDateTime.now() + "]: Inform server we are connected to all neighbours.");
+            dos.writeUTF("CONNECTED");
+            dos.flush();
+
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting for ALL the connections to be made...");
             dis.readUTF();
             System.out.println("[" + LocalDateTime.now() + "]: ALL the connections were made!");
 
@@ -82,10 +108,6 @@ public class Main
 
 
             // TODO: Streaming? Where to handle? Another thread? NodeController?
-            System.out.println("[" + LocalDateTime.now() + "]: Creating UDP socket...");
-            DatagramSocket datagramSocket = new DatagramSocket(PORT);
-            System.out.println("[" + LocalDateTime.now() + "]: UDP socket created and bound to port " + PORT + ".");
-
 
             // Hyperparameters for thread pool
             System.out.println("[" + LocalDateTime.now() + "]: Setting hyper parameters for thread pool...");
@@ -101,9 +123,7 @@ public class Main
             System.out.println("[" + LocalDateTime.now() + "]: Running node listener on main thread...");
             NodeController nodeController = new NodeController(
                     serverSocket,
-                    socketMap,
-                    connectionStarter.getInputStreamMap(),
-                    connectionStarter.getOutputStreamMap(),
+                    connectionDataMap,
                     corePoolSize,
                     maxPoolSize,
                     maxQueuedTasks

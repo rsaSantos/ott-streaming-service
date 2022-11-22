@@ -1,15 +1,12 @@
-package org.onode.utils;
+package org.onode.control.reader;
 
 import org.onode.control.NodeController;
-import org.onode.control.NodeListener;
 
-import java.io.*;
-import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.locks.*;
 
-public abstract class AbstractNodeListener implements Runnable
+public abstract class AbstractNodeReader implements Runnable
 {
     private final Lock readLock;
     private final Lock writeLock;
@@ -18,7 +15,7 @@ public abstract class AbstractNodeListener implements Runnable
 
     private final Queue<String> dataQueue;
 
-    public AbstractNodeListener(String address)
+    public AbstractNodeReader(String address)
     {
         this.address = address;
         this.dataQueue = new LinkedList<>();

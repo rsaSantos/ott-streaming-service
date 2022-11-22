@@ -1,27 +1,24 @@
 package org.onode.utils;
 
 import org.onode.control.NodeController;
+import org.onode.control.NodeListener;
 
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.*;
 
 public abstract class AbstractNodeListener implements Runnable
 {
     private final Lock readLock;
     private final Lock writeLock;
-    private final Condition isReadDataAvailable;
 
     private final String address;
 
     private final Queue<String> dataQueue;
 
-    public AbstractNodeListener(Condition isReadDataAvailable, String address)
+    public AbstractNodeListener(String address)
     {
         this.address = address;
         this.dataQueue = new LinkedList<>();
@@ -29,7 +26,6 @@ public abstract class AbstractNodeListener implements Runnable
         ReadWriteLock lock = new ReentrantReadWriteLock();
         this.readLock = lock.readLock();
         this.writeLock = lock.writeLock();
-        this.isReadDataAvailable = isReadDataAvailable;
     }
 
     @Override
@@ -39,7 +35,10 @@ public abstract class AbstractNodeListener implements Runnable
         {
             String data = this.waitForData();
             if(data != null)
+            {
                 this.putData(data);
+                if (data.equals(NodeController.DELETE_ME)) break;
+            }
         }
     }
 
@@ -52,9 +51,13 @@ public abstract class AbstractNodeListener implements Runnable
         try {
             this.writeLock.lock();
             this.dataQueue.add(data);
-            this.isReadDataAvailable.notifyAll();
+            synchronized (this)
+            {
+                notifyAll();
+            }
         }
-        finally {
+        finally
+        {
             this.writeLock.unlock();
         }
     }

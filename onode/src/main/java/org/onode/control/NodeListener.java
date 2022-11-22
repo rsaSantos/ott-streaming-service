@@ -1,6 +1,7 @@
 package org.onode.control;
 
 import org.onode.utils.AbstractNodeListener;
+import org.w3c.dom.Node;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -10,15 +11,14 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.time.LocalDateTime;
-import java.util.concurrent.locks.Condition;
 
 public class NodeListener<L> extends AbstractNodeListener
 {
     private final L listener; // L type is either DataInputStream or ServerSocket
 
-    public NodeListener(Condition isReadDataAvailable, L listener, String address) throws SocketException
+    public NodeListener( L listener, String address) throws SocketException
     {
-        super(isReadDataAvailable, address);
+        super(address);
         this.listener = listener;
         if(this.listener instanceof ServerSocket)
             ((ServerSocket) this.listener).setSoTimeout(0);
@@ -34,6 +34,7 @@ public class NodeListener<L> extends AbstractNodeListener
         {
             try
             {
+                System.out.println("[" + LocalDateTime.now() + "]: Waiting for data from [" + super.getAddress() + "].");
                 data = ((DataInputStream) this.listener).readUTF();
             }
             catch (EOFException e)
@@ -41,6 +42,7 @@ public class NodeListener<L> extends AbstractNodeListener
                 System.err.println("[" + LocalDateTime.now() + "]: Input stream from address [" + super.getAddress() + "] received EOF.");
 
                 // Tell node listener to close this socket and exit.
+                data = NodeController.DELETE_ME;
                 super.putData(NodeController.DELETE_ME);
                 this.closeListener();
             }

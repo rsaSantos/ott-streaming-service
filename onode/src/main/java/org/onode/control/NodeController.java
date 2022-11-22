@@ -9,8 +9,6 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class NodeController implements Runnable
 {
@@ -22,27 +20,28 @@ public class NodeController implements Runnable
 
     private final Map<String, Thread> readerThreadsMap;
     private final Map<String, NodeListener<?>> listenerTCPMap;
+    private final Map<String, DataInputStream> inputStreamMap;
     private final Map<String, DataOutputStream> outputStreamMap;
 
-    private final Condition isReadDataAvailable;
     private final ExecutorService threadPoolExecutor;
 
     public NodeController(
             ServerSocket serverSocket,
             Map<String, Socket> socketsMap,
+            Map<String, DataInputStream> inputStreamMap,
+            Map<String, DataOutputStream> outputStreamMap,
             int corePoolSize,
             int maxPoolSize,
             int maxQueuedTasks)
     {
         this.serverSocket = serverSocket;
         this.socketsMap = socketsMap;
+        this.outputStreamMap = outputStreamMap;
+        this.inputStreamMap = inputStreamMap;
         this.listenerTCPMap = new HashMap<>();
-        this.outputStreamMap = new HashMap<>();
         this.readerThreadsMap = new HashMap<>();
 
         // TODO: Thread pool for writing tasks ? Create pre-defined number of threads?
-        this.isReadDataAvailable = new ReentrantLock().newCondition();
-
         threadPoolExecutor = new ThreadPoolExecutor(
                 corePoolSize,
                 maxPoolSize,
@@ -60,19 +59,17 @@ public class NodeController implements Runnable
         this.createShutdownHook();
 
         // Setup reading threads/instances and writing instances.
-        for(Map.Entry<String, Socket> socketEntry : this.socketsMap.entrySet())
+        for(Map.Entry<String, DataInputStream> disEntry : this.inputStreamMap.entrySet())
         {
-            String address = socketEntry.getKey();
-            Socket socket = socketEntry.getValue();
+            String address = disEntry.getKey();
+            DataInputStream dis = disEntry.getValue();
 
             try
             {
                 System.out.println("[" + LocalDateTime.now() + "]: Processing threads for address [\u001B[32m" + address + "\u001B[0m]...");
 
-                NodeListener<DataInputStream> nodeListener = new NodeListener<>(this.isReadDataAvailable, new DataInputStream(socket.getInputStream()), address);
+                NodeListener<DataInputStream> nodeListener = new NodeListener<>(dis, address);
                 this.listenerTCPMap.put(address, nodeListener);
-
-                this.outputStreamMap.put(address, new DataOutputStream(socket.getOutputStream()));
 
                 Thread readingThread = new Thread(nodeListener, "read_" + address);
                 this.readerThreadsMap.put(address, readingThread);
@@ -95,9 +92,12 @@ public class NodeController implements Runnable
             {
                 // Wait until some reading thread reads something...
                 // TODO: Define optimal time...(current time for debugging only).
-                boolean wasTimeout = this.isReadDataAvailable.await(5, TimeUnit.MINUTES);
-                if(wasTimeout)
-                    System.out.println("[" + LocalDateTime.now() + "]: Condition timeout...");
+                synchronized (this)
+                {
+                    System.out.println("[" + LocalDateTime.now() + "]: Main thread waiting to wake up...");
+                    wait(60000); // 1 minute
+                    System.out.println("[" + LocalDateTime.now() + "]: Main thread woke up!");
+                }
 
                 // Check all reading queues...
                 List<String> addressesToDelete = new ArrayList<>();
@@ -137,6 +137,7 @@ public class NodeController implements Runnable
         {
             this.readerThreadsMap.remove(address);
             this.listenerTCPMap.remove(address);
+            this.inputStreamMap.remove(address);
 
             DataOutputStream dos = this.outputStreamMap.get(address);
             if(dos != null)
@@ -178,9 +179,9 @@ public class NodeController implements Runnable
             {
                 // TODO: Delete thread pool and run sequentially.
 
-                for(Map.Entry<String, NodeListener<?>> readerTCPEntry : this.listenerTCPMap.entrySet())
+                for(Map.Entry<String, DataInputStream> disEntry : this.inputStreamMap.entrySet())
                 {
-                    readerTCPEntry.getValue().closeListener();
+                    disEntry.getValue().close();
                 }
 
                 for(Map.Entry<String, DataOutputStream> dosEntry : this.outputStreamMap.entrySet())
@@ -207,6 +208,7 @@ public class NodeController implements Runnable
                 this.readerThreadsMap.clear();
                 this.socketsMap.clear();
                 this.listenerTCPMap.clear();
+                this.inputStreamMap.clear();
                 this.readerThreadsMap.clear();
 
                 this.serverSocket.close();

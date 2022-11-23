@@ -26,9 +26,8 @@ public class StarterSender extends AbstractStart implements Runnable
                 try
                 {
                     Socket socket = new Socket(address, Main.PORT);
-                    System.out.println("[" + LocalDateTime.now() + "]: Connected to host [\u001B[32m" + address + "\u001B[0m].");
+                    System.out.println("[" + LocalDateTime.now() + "]: Connected to host [" + address + "].");
                     super.tryConnection(socket);
-                    System.out.println("[" + LocalDateTime.now() + "]: Connection to host [\u001B[32m" + address + "\u001B[0m] successful.");
                     break;
                 }
                 catch (IOException e)

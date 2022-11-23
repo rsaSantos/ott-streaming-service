@@ -1,8 +1,9 @@
 package org.onode.control;
 
 
-import org.onode.control.reader.NodeReader;
+import org.onode.control.reader.NodeReceiver;
 import org.onode.control.writer.NodeTask;
+import org.onode.utils.Pair;
 import org.onode.utils.Triplet;
 
 import java.io.DataInputStream;
@@ -21,8 +22,9 @@ public class NodeController implements Runnable
     private final ServerSocket serverSocket;
     private final Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> connectionDataMap;
     private final Map<String, Thread> readerThreadsMap;
-    private final Map<String, NodeReader<?>> listenerTCPMap;
+    private final Map<String, NodeReceiver<?>> nodeReceiverMap;
     private final ExecutorService threadPoolExecutor;
+    private final LinkedBlockingQueue<Pair<String, String>> dataQueue;
 
     public NodeController(
             ServerSocket serverSocket,
@@ -33,11 +35,14 @@ public class NodeController implements Runnable
     {
         this.serverSocket = serverSocket;
         this.connectionDataMap = connectionDataMap;
-        this.listenerTCPMap = new HashMap<>();
+        this.nodeReceiverMap = new HashMap<>();
         this.readerThreadsMap = new HashMap<>();
 
+        // TODO: limit the size of the queue? then threads inserting data will have to wait...
+        this.dataQueue = new LinkedBlockingQueue<>();
+
         // TODO: Thread pool for writing tasks ? Create pre-defined number of threads?
-        threadPoolExecutor = new ThreadPoolExecutor(
+        this.threadPoolExecutor = new ThreadPoolExecutor(
                 corePoolSize,
                 maxPoolSize,
                 5,
@@ -49,7 +54,6 @@ public class NodeController implements Runnable
     @Override
     public void run()
     {
-        // TODO: Needed? How to effectively close connections? Send closing message?
         // Behaviour on exit...(closing sockets)
         this.createShutdownHook();
 
@@ -63,8 +67,8 @@ public class NodeController implements Runnable
             {
                 System.out.println("[" + LocalDateTime.now() + "]: Processing threads for address [\u001B[32m" + address + "\u001B[0m]...");
 
-                NodeReader<DataInputStream> nodeListener = new NodeReader<>(dis, address);
-                this.listenerTCPMap.put(address, nodeListener);
+                NodeReceiver<DataInputStream> nodeListener = new NodeReceiver<>(this.dataQueue, dis, address);
+                this.nodeReceiverMap.put(address, nodeListener);
 
                 Thread readingThread = new Thread(nodeListener, "read_" + address);
                 this.readerThreadsMap.put(address, readingThread);
@@ -86,35 +90,22 @@ public class NodeController implements Runnable
             try
             {
                 // Wait until some reading thread reads something...
-                // TODO: Define optimal time...(current time for debugging only).
-                synchronized (this)
-                {
-                    System.out.println("[" + LocalDateTime.now() + "]: Main thread waiting to wake up...");
-                    wait(60000); // 1 minute
-                    System.out.println("[" + LocalDateTime.now() + "]: Main thread woke up!");
-                }
+                // TODO: (If more than one thread is reading from this queue consider using ConcurrentLinkedQueue.)
+                System.out.println("[" + LocalDateTime.now() + "]: Main thread waiting for data...");
+                Pair<String, String> dataPair = this.dataQueue.take();
+                String address = dataPair.first();
+                String data = dataPair.second();
+                System.out.println("[" + LocalDateTime.now() + "]: Main thread received data from [" + address + "].");
 
-                // Check all reading queues...
-                List<String> addressesToDelete = new ArrayList<>();
-                for(Map.Entry<String, NodeReader<?>> readerTCP : this.listenerTCPMap.entrySet())
+                if(data.equals(DELETE_ME))
                 {
-                    String data = readerTCP.getValue().readData();
-                    if(data != null)
-                    {
-                        String address = readerTCP.getKey();
-                        if(data.equals(DELETE_ME))
-                        {
-                            addressesToDelete.add(address);
-                        }
-                        else
-                        {
-                            // TODO: Add task for thread pool.
-                            this.threadPoolExecutor.execute(new NodeTask());
-                        }
-                    }
+                    this.deleteAddress(address);
                 }
-                if (!addressesToDelete.isEmpty())
-                    this.deleteAddress(addressesToDelete);
+                else
+                {
+                    // TODO: Add task for thread pool.
+                    this.threadPoolExecutor.execute(new NodeTask());
+                }
             }
             catch (InterruptedException e)
             {
@@ -123,48 +114,40 @@ public class NodeController implements Runnable
         }
     }
 
-    private void deleteAddress(List<String> addresses)
+    private void deleteAddress(String address)
     {
         // Input stream already closed.
-        // Delete instances of Thread, NodeReader and NodeWriterTCP.
+        // Delete instances of Thread, NodeReceiver and NodeWriterTCP.
         // Close socket.
-        for(String address : addresses)
-        {
-            this.readerThreadsMap.remove(address);
-            this.listenerTCPMap.remove(address);
 
-            Triplet<Socket, DataInputStream, DataOutputStream> conData = this.connectionDataMap.get(address);
+        this.readerThreadsMap.remove(address);
+        this.nodeReceiverMap.remove(address);
 
-            DataOutputStream dos = conData.third();
-            if(dos != null)
-            {
-                try
-                {
-                    dos.close();
-                }
-                catch (IOException e)
-                {
-                    System.err.println("Error closing output stream for address [" + address + "].");
-                    e.printStackTrace();
-                }
-            }
+        Triplet<Socket, DataInputStream, DataOutputStream> conData = this.connectionDataMap.get(address);
 
-            Socket socket = conData.first();
-            try
-            {
-                if(socket != null)
-                {
-                    socket.close();
-                }
-            }
-            catch (IOException e)
-            {
-                System.err.println("Error closing socket to address [" + address + "].");
+        DataOutputStream dos = conData.third();
+        if(dos != null) {
+            try {
+                dos.close();
+            } catch (IOException e) {
+                System.err.println("Error closing output stream for address [" + address + "].");
                 e.printStackTrace();
             }
-
-            this.connectionDataMap.remove(address);
         }
+
+        Socket socket = conData.first();
+        try {
+            if (socket != null) {
+                socket.close();
+            }
+        }
+        catch (IOException e) {
+            System.err.println("[" + LocalDateTime.now() + "]: Error closing socket to address [" + address + "].");
+            e.printStackTrace();
+        }
+
+        this.connectionDataMap.remove(address);
+        System.out.println("[" + LocalDateTime.now() + "]: Removed host [" + address + "].");
     }
 
     // TODO: Test this...is it needed?
@@ -173,12 +156,11 @@ public class NodeController implements Runnable
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try
             {
-                // TODO: Delete thread pool and run sequentially.
+                // TODO: later coordinate this shutdown
+                this.threadPoolExecutor.shutdown();
 
                 for(Map.Entry<String, Triplet<Socket, DataInputStream, DataOutputStream>> conEntry : this.connectionDataMap.entrySet())
                 {
-                    DataInputStream dis = conEntry.getValue().second();
-                    dis.close();
 
                     DataOutputStream dos = conEntry.getValue().third();
                     try
@@ -192,13 +174,16 @@ public class NodeController implements Runnable
                         e.printStackTrace();
                     }
 
+                    DataInputStream dis = conEntry.getValue().second();
+                    dis.close();
+
                     Socket socket = conEntry.getValue().first();
                     socket.close();
                 }
 
                 this.connectionDataMap.clear();
                 this.readerThreadsMap.clear();
-                this.listenerTCPMap.clear();
+                this.nodeReceiverMap.clear();
                 this.readerThreadsMap.clear();
 
                 this.serverSocket.close();

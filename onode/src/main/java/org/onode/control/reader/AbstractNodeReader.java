@@ -1,28 +1,21 @@
 package org.onode.control.reader;
 
 import org.onode.control.NodeController;
+import org.onode.utils.Pair;
 
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.locks.*;
+import java.time.LocalDateTime;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public abstract class AbstractNodeReader implements Runnable
 {
-    private final Lock readLock;
-    private final Lock writeLock;
-
     private final String address;
 
-    private final Queue<String> dataQueue;
+    private final LinkedBlockingQueue<Pair<String, String>> dataQueue;
 
-    public AbstractNodeReader(String address)
+    public AbstractNodeReader(LinkedBlockingQueue<Pair<String, String>> dataQueue, String address)
     {
         this.address = address;
-        this.dataQueue = new LinkedList<>();
-
-        ReadWriteLock lock = new ReentrantReadWriteLock();
-        this.readLock = lock.readLock();
-        this.writeLock = lock.writeLock();
+        this.dataQueue = dataQueue;
     }
 
     @Override
@@ -33,58 +26,25 @@ public abstract class AbstractNodeReader implements Runnable
             String data = this.waitForData();
             if(data != null)
             {
-                this.putData(data);
+                try
+                {
+                    System.out.println("[" + LocalDateTime.now() + "]: Trying to add data to queue of host [" + this.address + "]");
+                    this.dataQueue.put(new Pair<>(this.address, data));
+                    System.out.println("[" + LocalDateTime.now() + "]: Added data to queue of host [" + this.address + "]");
+                }
+                catch (InterruptedException e)
+                {
+                    System.err.println("[" + LocalDateTime.now() + "]: Failed to insert data into queue of host [" + this.address + "].");
+                }
+
                 if (data.equals(NodeController.DELETE_ME)) break;
             }
         }
+        System.out.println("[" + LocalDateTime.now() + "]: Exiting NodeReceiver for address [" + this.address + "].");
     }
 
     abstract protected String waitForData();
     abstract protected void closeListener();
-
-
-    protected void putData(String data)
-    {
-        try {
-            this.writeLock.lock();
-            this.dataQueue.add(data);
-            synchronized (this)
-            {
-                notifyAll();
-            }
-        }
-        finally
-        {
-            this.writeLock.unlock();
-        }
-    }
-
-    public String readData()
-    {
-        try
-        {
-            this.readLock.lock();
-            if(!this.dataQueue.isEmpty())
-            {
-                try
-                {
-                    this.writeLock.lock();
-                    return this.dataQueue.poll();
-                }
-                finally
-                {
-                    this.writeLock.unlock();
-                }
-            }
-            else
-                return null;
-        }
-        finally
-        {
-            this.readLock.unlock();
-        }
-    }
-
     public String getAddress()
     {
         return this.address;

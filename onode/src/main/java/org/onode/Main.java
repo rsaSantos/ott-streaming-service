@@ -19,6 +19,11 @@ public class Main
 {
     public static final String BOOTSTRAPPER_IP = "10.0.20.10";
     public static final int PORT = 25000 + 1;
+    private static final String ALL_LIST = "ALL NODES HAVE THE LIST!";
+    private static final String LISTENING = "LISTENING";
+    private static final String ALL_LISTENING = "ALL NODES ARE LISTENING!";
+    private static final String CONNECTED = "CONNECTED";
+    private static final String ALL_CONNECTED = "ALL NODES ARE CONNECTED!";
 
     public static void main(String[] args)
     {
@@ -41,8 +46,9 @@ public class Main
             System.out.println("[" + LocalDateTime.now() + "]: Generated token [\u001B[32m" + token + "\u001B[0m].");
 
             // Reading the message that signals that all nodes received their adjacent list.
-            dis.readUTF();
-
+            String permission = dis.readUTF();
+            while(!permission.equals(ALL_LIST))
+                permission = dis.readUTF();
             StarterListener starterListener = new StarterListener(serverSocket, adjacents, token);
             Thread starterListenerThread = new Thread(starterListener);
             starterListenerThread.start();
@@ -53,11 +59,13 @@ public class Main
 
 
             System.out.println("[" + LocalDateTime.now() + "]: Inform server we are waiting for neighbours to connect....");
-            dos.writeUTF("LISTENING");
+            dos.writeUTF(LISTENING);
             dos.flush();
 
             System.out.println("[" + LocalDateTime.now() + "]: Waiting for permission to start sending requests...");
-            dis.readUTF();
+            permission = dis.readUTF();
+            while(!permission.equals(ALL_LISTENING))
+                permission = dis.readUTF();
             System.out.println("[" + LocalDateTime.now() + "]: Starting to send requests...");
 
             StarterSender starterSender = new StarterSender(adjacents, token);
@@ -65,6 +73,7 @@ public class Main
 
             System.out.println("[" + LocalDateTime.now() + "]: Waiting for listener thread...");
             starterListenerThread.join();
+            System.out.println("[" + LocalDateTime.now() + "]: Listener thread joined.");
 
             // TODO: Get final list of streams...
             Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> listenerConnectionDataMap = starterListener.getConnectionDataMap();
@@ -80,11 +89,13 @@ public class Main
             senderConnectionDataMap.clear();
 
             System.out.println("[" + LocalDateTime.now() + "]: Inform server we are connected to all neighbours.");
-            dos.writeUTF("CONNECTED");
+            dos.writeUTF(CONNECTED);
             dos.flush();
 
             System.out.println("[" + LocalDateTime.now() + "]: Waiting for ALL the connections to be made...");
-            dis.readUTF();
+            permission = dis.readUTF();
+            while(!permission.equals(ALL_CONNECTED))
+                permission = dis.readUTF();
             System.out.println("[" + LocalDateTime.now() + "]: ALL the connections were made!");
 
             // Close reading stream

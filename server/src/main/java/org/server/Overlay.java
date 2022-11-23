@@ -97,6 +97,7 @@ public class Overlay {
             {
                 out  = new DataOutputStream(nodeConnection.getOutputStream());
                 out.writeUTF(adjacents);
+                out.flush();
             }
             catch (IOException e)
             {

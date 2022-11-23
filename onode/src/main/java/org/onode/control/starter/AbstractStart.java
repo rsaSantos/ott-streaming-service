@@ -6,6 +6,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,6 +43,7 @@ public abstract class AbstractStart
             {
                 Triplet<Socket, DataInputStream, DataOutputStream> connectionData = new Triplet<>(socket, dis, dos);
                 this.connectionDataMap.put(address, connectionData);
+                System.out.println("[" + LocalDateTime.now() + "]: Connection to host [\u001B[32m" + address + "\u001B[0m] successful.");
             }
             else
             {

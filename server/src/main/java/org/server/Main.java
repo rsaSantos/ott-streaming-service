@@ -13,6 +13,13 @@ public class Main {
 
     private static final int PORT = 25000;
 
+    private static final String ALL_LIST = "ALL NODES HAVE THE LIST!";
+
+    private static final String LISTENING = "LISTENING";
+    private static final String ALL_LISTENING = "ALL NODES ARE LISTENING!";
+    private static final String CONNECTED = "CONNECTED";
+    private static final String ALL_CONNECTED = "ALL NODES ARE CONNECTED!";
+
     public static void main(String[] args)
     {
         // Read the configuration file.
@@ -52,42 +59,29 @@ public class Main {
             }
 
             // TODO (EXTRA): CRITICAL VS NON-CRITICAL NODES
-            System.out.println("[" + LocalDateTime.now() + "]: All nodes have the list of adjacents.");
-
             List<Pair<Boolean, DataInputStream>> inputStreams = new ArrayList<>();
             for(Pair<Socket, DataOutputStream> node : connectedNodes)
             {
-                System.out.println("[" + LocalDateTime.now() + "]: Informing host with address " + "[\u001B[32m" + node.getFirst().getInetAddress().getHostAddress() + "\u001B[0m].");
-                node.getSecond().writeUTF("ALL NODES HAVE THE LIST!");
-                node.getSecond().flush();
                 inputStreams.add(new Pair<>(true, new DataInputStream(node.getFirst().getInputStream())));
             }
 
-            // TODO: Sleep for a few seconds while nodes connect to each other?
-            System.out.println("[" + LocalDateTime.now() + "]: Waiting for nodes to connect to each other...");
+            System.out.println("[" + LocalDateTime.now() + "]: All nodes have the list of adjacents.");
+            informAllNodes(connectedNodes, ALL_LIST);
 
-            int i = inputStreams.size();
-            while(i > 0)
-            {
-                for(Pair<Boolean, DataInputStream> node : inputStreams)
-                {
-                    if(node.getFirst() && node.getSecond().available() > 0)
-                    {
-                        node.setFirst(false);
-                        i--;
-                    }
-                }
-            }
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting for nodes to start listening...");
+            waitAllNodes(inputStreams, LISTENING);
+            System.out.println("[" + LocalDateTime.now() + "]: All nodes have started their listeners.");
 
-            System.out.println("[" + LocalDateTime.now() + "]: All nodes have connected to each other.");
+            informAllNodes(connectedNodes, ALL_LISTENING);
 
-            for(Pair<Socket, DataOutputStream> node : connectedNodes)
-            {
-                System.out.println("[" + LocalDateTime.now() + "]: Informing host with address " + "[\u001B[32m" + node.getFirst().getInetAddress().getHostAddress() + "\u001B[0m].");
-                node.getSecond().writeUTF("ALL NODES ARE CONNECTED!");
-                node.getSecond().flush();
-            }
+            // Set the boolean values of the input streams to true (will need to iterate again)
+            inputStreams.forEach(p -> p.setFirst(true));
 
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting for nodes to be connected...");
+            waitAllNodes(inputStreams, CONNECTED);
+            System.out.println("[" + LocalDateTime.now() + "]: All nodes are connected.");
+
+            informAllNodes(connectedNodes, ALL_CONNECTED);
 
             System.out.println("[" + LocalDateTime.now() + "]: Closing all the connections...");
             for(Pair<Boolean, DataInputStream> node : inputStreams)
@@ -109,6 +103,36 @@ public class Main {
         }
         catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static void waitAllNodes(List<Pair<Boolean, DataInputStream>> inputStreams, String message) throws IOException
+    {
+        int i = inputStreams.size();
+        while(i > 0)
+        {
+            for(Pair<Boolean, DataInputStream> node : inputStreams)
+            {
+                if(node.getFirst() && node.getSecond().available() > 0)
+                {
+                    String listening = node.getSecond().readUTF();
+                    if(listening.equals(message))
+                    {
+                        node.setFirst(false);
+                        i--;
+                    }
+                }
+            }
+        }
+    }
+
+    private static void informAllNodes(List<Pair<Socket, DataOutputStream>> connectedNodes, String message) throws IOException
+    {
+        for(Pair<Socket, DataOutputStream> node : connectedNodes)
+        {
+            System.out.println("[" + LocalDateTime.now() + "]: Informing host with address " + "[\u001B[32m" + node.getFirst().getInetAddress().getHostAddress() + "\u001B[0m].");
+            node.getSecond().writeUTF(message);
+            node.getSecond().flush();
         }
     }
 }

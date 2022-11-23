@@ -1,6 +1,7 @@
 package org.onode.control.reader;
 
 import org.onode.control.NodeController;
+import org.onode.utils.Pair;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -10,14 +11,15 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.time.LocalDateTime;
+import java.util.concurrent.LinkedBlockingQueue;
 
-public class NodeReader<L> extends AbstractNodeReader
+public class NodeReceiver<L> extends AbstractNodeReader
 {
     private final L listener; // L type is either DataInputStream or ServerSocket
 
-    public NodeReader(L listener, String address) throws SocketException
+    public NodeReceiver(LinkedBlockingQueue<Pair<String, String>> dataQueue, L listener, String address) throws SocketException
     {
-        super(address);
+        super(dataQueue,address);
         this.listener = listener;
         if(this.listener instanceof ServerSocket)
             ((ServerSocket) this.listener).setSoTimeout(0);
@@ -42,7 +44,6 @@ public class NodeReader<L> extends AbstractNodeReader
 
                 // Tell node listener to close this socket and exit.
                 data = NodeController.DELETE_ME;
-                super.putData(NodeController.DELETE_ME);
                 this.closeListener();
             }
             // Keeps running after this exception....
@@ -53,10 +54,10 @@ public class NodeReader<L> extends AbstractNodeReader
             // Stop running...
             catch (IOException e)
             {
-                System.err.println("[IOException] Stream has been closed.");
+                System.err.println("[" + LocalDateTime.now() + "]: [IOException] Stream has been closed.");
 
                 // Tell node listener to close this socket and exit.
-                super.putData(NodeController.DELETE_ME);
+                data = NodeController.DELETE_ME;
                 this.closeListener();
             }
         }
@@ -89,7 +90,7 @@ public class NodeReader<L> extends AbstractNodeReader
         }
         catch (IOException e)
         {
-            System.err.println("Error closing listener on address " + super.getAddress());
+            System.err.println("[" + LocalDateTime.now() + "]: Error closing listener on address " + super.getAddress());
         }
     }
 }

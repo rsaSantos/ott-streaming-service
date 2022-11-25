@@ -11,7 +11,7 @@ import java.util.List;
 
 public class StarterSender extends AbstractStart implements Runnable
 {
-    public StarterSender(List<String> adjacents, Integer token)
+    public StarterSender(List<String> adjacents, int token)
     {
         super(adjacents, token);
     }
@@ -47,19 +47,25 @@ public class StarterSender extends AbstractStart implements Runnable
             dos.writeInt(myToken);
             dos.flush();
             int neighbourRandom = dis.readInt();
+            System.out.println("[" + LocalDateTime.now() + "]: Received token " + neighbourRandom + ".");
 
             if(neighbourRandom != myToken)
             {
+                System.out.println("COMPARE: my= " + myToken + ", neighbour=" + neighbourRandom);
+
                 if(neighbourRandom < myToken)
                     ret = GOOD_KEEP;
                 else
                     ret = GOOD_DROP;
 
                 dos.writeUTF(OK);
-                dos.flush();
             }
             else
+            {
                 System.err.println("[" + LocalDateTime.now() + "]: Random numbers are equal!. Restart program!");
+                dos.writeUTF(NOT_OK);
+            }
+            dos.flush();
         }
         catch (IOException e)
         {

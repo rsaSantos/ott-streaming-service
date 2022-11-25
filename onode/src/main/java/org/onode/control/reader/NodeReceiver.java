@@ -1,7 +1,7 @@
 package org.onode.control.reader;
 
 import org.onode.control.NodeController;
-import org.onode.utils.Pair;
+import org.onode.utils.Triplet;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -11,15 +11,17 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class NodeReceiver<L> extends AbstractNodeReader
 {
     private final L listener; // L type is either DataInputStream or ServerSocket
 
-    public NodeReceiver(LinkedBlockingQueue<Pair<String, String>> dataQueue, L listener, String address) throws SocketException
+    public NodeReceiver(LinkedBlockingQueue<Triplet<Integer, List<String>, Object>> dataQueue, L listener, String address) throws SocketException
     {
-        super(dataQueue,address);
+        super(dataQueue, address);
         this.listener = listener;
         if(this.listener instanceof ServerSocket)
             ((ServerSocket) this.listener).setSoTimeout(0);
@@ -65,6 +67,7 @@ public class NodeReceiver<L> extends AbstractNodeReader
         {
             try
             {
+                System.out.println("[" + LocalDateTime.now() + "]: Waiting for data from [" + super.getAddress() + "].");
                 Socket socket = ((ServerSocket) this.listener).accept();
                 DataInputStream dis = new DataInputStream(socket.getInputStream());
                 data = dis.readUTF();

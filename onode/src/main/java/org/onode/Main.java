@@ -42,7 +42,7 @@ public class Main
 
             List<String> adjacents = getAdjacents(dis);
 
-            Integer token = new Random().nextInt();
+            int token = new Random().nextInt();
             System.out.println("[" + LocalDateTime.now() + "]: Generated token [\u001B[32m" + token + "\u001B[0m].");
 
             // Reading the message that signals that all nodes received their adjacent list.
@@ -133,6 +133,7 @@ public class Main
 
             System.out.println("[" + LocalDateTime.now() + "]: Running node listener on main thread...");
             NodeController nodeController = new NodeController(
+                    adjacents,
                     serverSocket,
                     connectionDataMap,
                     corePoolSize,

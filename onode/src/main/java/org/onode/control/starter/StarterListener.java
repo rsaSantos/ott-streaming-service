@@ -12,7 +12,7 @@ public class StarterListener extends AbstractStart implements Runnable
 {
     private final ServerSocket serverSocket;
 
-    public StarterListener(ServerSocket serverSocket, List<String> adjacents, Integer token)
+    public StarterListener(ServerSocket serverSocket, List<String> adjacents, int token)
     {
         super(adjacents, token);
         this.serverSocket = serverSocket;
@@ -52,13 +52,17 @@ public class StarterListener extends AbstractStart implements Runnable
             if(ok.equals(OK))
             {
                 System.out.println("[" + LocalDateTime.now() + "]: Received neighbour confirmation.");
+                System.out.println("COMPARE: my= " + myToken + ", neighbour=" + neighbourRandom);
                 if(neighbourRandom < myToken)
                     ret = GOOD_KEEP;
-                else if(neighbourRandom > myToken)
-                    ret = GOOD_DROP;
                 else
-                    System.err.println("[" + LocalDateTime.now() + "]: Random numbers are equal!. Restart program!");
+                    ret = GOOD_DROP;
+
+                dos.writeUTF(OK);
+                dos.flush();
             }
+            else
+                System.err.println("[" + LocalDateTime.now() + "]: Random numbers are equal!. Restart program!");
         }
         catch (IOException e)
         {

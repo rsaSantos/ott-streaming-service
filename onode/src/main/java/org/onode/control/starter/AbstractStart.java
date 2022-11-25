@@ -18,6 +18,7 @@ public abstract class AbstractStart
     protected final static int GOOD_DROP = 1;
     protected final static int GOOD_KEEP = 1;
     protected final static String OK = "OK";
+    protected final static String NOT_OK = "NOK";
     private final List<String> adjacents;
     private final int token;
 
@@ -45,7 +46,7 @@ public abstract class AbstractStart
                 this.connectionDataMap.put(address, connectionData);
                 System.out.println("[" + LocalDateTime.now() + "]: Connection to host [\u001B[32m" + address + "\u001B[0m] successful.");
             }
-            else
+            else if (testResult == GOOD_DROP)
             {
                 dis.close();
                 dos.close();

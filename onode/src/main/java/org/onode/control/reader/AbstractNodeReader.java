@@ -1,18 +1,20 @@
 package org.onode.control.reader;
 
 import org.onode.control.NodeController;
-import org.onode.utils.Pair;
+import org.onode.utils.Triplet;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public abstract class AbstractNodeReader implements Runnable
 {
     private final String address;
 
-    private final LinkedBlockingQueue<Pair<String, String>> dataQueue;
+    private final LinkedBlockingQueue<Triplet<Integer, List<String>, Object>> dataQueue;
 
-    public AbstractNodeReader(LinkedBlockingQueue<Pair<String, String>> dataQueue, String address)
+    public AbstractNodeReader(LinkedBlockingQueue<Triplet<Integer, List<String>, Object>> dataQueue, String address)
     {
         this.address = address;
         this.dataQueue = dataQueue;
@@ -29,7 +31,7 @@ public abstract class AbstractNodeReader implements Runnable
                 try
                 {
                     System.out.println("[" + LocalDateTime.now() + "]: Trying to add data to queue of host [" + this.address + "]");
-                    this.dataQueue.put(new Pair<>(this.address, data));
+                    this.dataQueue.put(new Triplet<>(NodeController.OP_READ, Collections.singletonList(this.address), data));
                     System.out.println("[" + LocalDateTime.now() + "]: Added data to queue of host [" + this.address + "]");
                 }
                 catch (InterruptedException e)

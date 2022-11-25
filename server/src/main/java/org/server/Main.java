@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +25,7 @@ public class Main {
     {
         // Read the configuration file.
         System.out.println("[" + LocalDateTime.now() + "]: Reading config file...");
-        Overlay overlay = new Overlay("target/classes/config.json");
+        Overlay overlay = new Overlay("target/classes/test_config.json");
         System.out.println("[" + LocalDateTime.now() + "]: Config file processed successfully!");
 
         // Get number of nodes: all and critical.
@@ -95,13 +96,27 @@ public class Main {
                 node.getFirst().close();
             }
 
+
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting 10 seconds...");
+            Thread.sleep(10000);
+            System.out.println("[" + LocalDateTime.now() + "]: Trying to connect with node 1...");
+
+            Socket socket = new Socket("10.0.20.10", 25000 + 1);
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            String payload = "0;" + Instant.now().toEpochMilli();
+            dos.writeUTF(payload);
+            dos.flush();
+            dos.close();
+            socket.close();
+
             connectedNodes.clear();
             System.out.println("[" + LocalDateTime.now() + "]: Connections closed.");
 
             System.out.println("[" + LocalDateTime.now() + "]: Closing server...");
             ss.close();
         }
-        catch (IOException e) {
+        catch (IOException | InterruptedException e)
+        {
             throw new RuntimeException(e);
         }
     }

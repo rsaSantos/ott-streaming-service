@@ -1,25 +1,37 @@
 package org.onode.control.starter;
 
 import org.onode.Main;
+import org.onode.utils.Triplet;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class StarterSender extends AbstractStart implements Runnable
+public class StarterSender implements Runnable, IStarter
 {
+    private final int token;
+    private final List<String> adjacents;
+    private final Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> connectionDataMap;
+
+
     public StarterSender(List<String> adjacents, int token)
     {
-        super(adjacents, token);
+        this.adjacents = adjacents;
+        this.token = token;
+        this.connectionDataMap = new HashMap<>();
     }
 
     @Override
     public void run()
     {
-        for (String address : super.getAdjacents())
+        List<String> iteratorAdjacents = new ArrayList<>(this.adjacents);
+        for (String address : iteratorAdjacents)
         {
             while(true)
             {
@@ -27,7 +39,7 @@ public class StarterSender extends AbstractStart implements Runnable
                 {
                     Socket socket = new Socket(address, Main.PORT);
                     System.out.println("[" + LocalDateTime.now() + "]: Connected to host [" + address + "].");
-                    super.tryConnection(socket);
+                    this.tryConnection(socket);
                     break;
                 }
                 catch (IOException e)
@@ -38,31 +50,53 @@ public class StarterSender extends AbstractStart implements Runnable
         }
     }
 
+    private void tryConnection(Socket socket) throws IOException
+    {
+        String address = socket.getInetAddress().getHostAddress();
+        if(this.adjacents.contains(address))
+        {
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+
+            int testResult = this.testConnection(dis, dos);
+            if (testResult == GOOD_KEEP)
+            {
+                Triplet<Socket, DataInputStream, DataOutputStream> connectionData = new Triplet<>(socket, dis, dos);
+                this.connectionDataMap.put(address, connectionData);
+                System.out.println("[" + LocalDateTime.now() + "]: Connection to host [\u001B[32m" + address + "\u001B[0m] successful.");
+            }
+            else if (testResult == GOOD_DROP)
+            {
+                dis.close();
+                dos.close();
+                socket.close();
+            }
+
+            if(testResult != ERROR)
+                this.adjacents.remove(address);
+        }
+    }
+
     protected int testConnection(DataInputStream dis, DataOutputStream dos)
     {
         int ret = ERROR;
-        int myToken = super.getToken();
         try
         {
-            dos.writeInt(myToken);
+            System.out.println("[" + LocalDateTime.now() + "]: Sent token " + this.token + ".");
+            dos.writeInt(this.token);
             dos.flush();
             int neighbourRandom = dis.readInt();
             System.out.println("[" + LocalDateTime.now() + "]: Received token " + neighbourRandom + ".");
 
-            if(neighbourRandom != myToken)
+            System.out.println("Comparing neighbour=" + neighbourRandom + ", with ours=" + this.token);
+            if(neighbourRandom > this.token)
             {
-                System.out.println("COMPARE: my= " + myToken + ", neighbour=" + neighbourRandom);
-
-                if(neighbourRandom < myToken)
-                    ret = GOOD_KEEP;
-                else
-                    ret = GOOD_DROP;
-
+                ret = GOOD_KEEP;
                 dos.writeUTF(OK);
             }
             else
             {
-                System.err.println("[" + LocalDateTime.now() + "]: Random numbers are equal!. Restart program!");
+                ret = GOOD_DROP;
                 dos.writeUTF(NOT_OK);
             }
             dos.flush();
@@ -75,4 +109,7 @@ public class StarterSender extends AbstractStart implements Runnable
         return ret;
     }
 
+    public Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> getConnectionDataMap() {
+        return connectionDataMap;
+    }
 }

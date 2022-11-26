@@ -49,7 +49,7 @@ public class Main
             String permission = dis.readUTF();
             while(!permission.equals(ALL_LIST))
                 permission = dis.readUTF();
-            StarterListener starterListener = new StarterListener(serverSocket, adjacents, token);
+            StarterListener starterListener = new StarterListener(serverSocket, new ArrayList<>(adjacents), token);
             Thread starterListenerThread = new Thread(starterListener);
             starterListenerThread.start();
 
@@ -68,7 +68,7 @@ public class Main
                 permission = dis.readUTF();
             System.out.println("[" + LocalDateTime.now() + "]: Starting to send requests...");
 
-            StarterSender starterSender = new StarterSender(adjacents, token);
+            StarterSender starterSender = new StarterSender(new ArrayList<>(adjacents), token);
             starterSender.run();
 
             System.out.println("[" + LocalDateTime.now() + "]: Waiting for listener thread...");
@@ -133,7 +133,7 @@ public class Main
 
             System.out.println("[" + LocalDateTime.now() + "]: Running node listener on main thread...");
             NodeController nodeController = new NodeController(
-                    adjacents,
+                    new ArrayList<>(adjacents),
                     serverSocket,
                     connectionDataMap,
                     corePoolSize,

@@ -47,7 +47,7 @@ public class NodeController implements Runnable
         this.connectionDataMap = connectionDataMap;
         this.nodeReceiverMap = new HashMap<>();
         this.readerThreadsMap = new HashMap<>();
-        this.adjacents = adjacents;
+        this.adjacents = new ArrayList<>(adjacents);
 
         // TODO: limit the size of the queue? then threads inserting data will have to wait...
         this.dataQueue = new LinkedBlockingQueue<>();

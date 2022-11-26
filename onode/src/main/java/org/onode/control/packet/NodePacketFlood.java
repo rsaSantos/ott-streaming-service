@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class NodePacketFlood implements NodePacket
+public class NodePacketFlood implements INodePacket
 {
 
     private final int ID;
@@ -24,6 +24,7 @@ public class NodePacketFlood implements NodePacket
     /**
      * Here we assume the packet has ID=1
      * The payload format is: 1;14;timestamp;elapsedTime;ip1,ip2,ip3,
+     * 1;0;1669476686020;8;,
      * or
      * 0;timestamp
      */
@@ -95,6 +96,7 @@ public class NodePacketFlood implements NodePacket
         return FLOOD_PACKET_ID + ARG_SEP
                 + 0 + ARG_SEP
                 + timestamp + ARG_SEP
-                + newElapsedTime + ARG_SEP;
+                + newElapsedTime + ARG_SEP
+                + LST_SEP;
     }
 }

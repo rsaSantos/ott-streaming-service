@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.concurrent.*;
 import org.exceptions.PacketFormatException;
 import org.onode.control.NodeController;
-import org.onode.control.packet.NodePacket;
+import org.onode.control.packet.INodePacket;
 import org.onode.control.packet.NodePacketFlood;
 import org.onode.utils.*;
 
-import static org.onode.control.packet.NodePacket.ARG_SEP;
+import static org.onode.control.packet.INodePacket.ARG_SEP;
 
 public class NodeTask implements Runnable
 {
@@ -76,8 +76,9 @@ public class NodeTask implements Runnable
             List<String> nodesToSend = new ArrayList<>(this.adjacents);
             nodesToSend.removeAll(routeAddresses);
 
-            // Create write task
-            this.dataQueue.put(new Triplet<>(NodeController.OP_WRITE, nodesToSend, payload));
+            // Create write task (only if there is someone to write to)
+            if(!nodesToSend.isEmpty())
+                this.dataQueue.put(new Triplet<>(NodeController.OP_WRITE, nodesToSend, payload));
         }
         catch(InterruptedException e)
         {
@@ -109,9 +110,9 @@ public class NodeTask implements Runnable
             try
             {
                 int packetID = Integer.parseInt(this.data.split(ARG_SEP)[0]);
-                if(packetID == NodePacket.FLOOD_PACKET_ID)
+                if(packetID == INodePacket.FLOOD_PACKET_ID)
                     this.flood(new NodePacketFlood(this.data));
-                else if (packetID == NodePacket.INITIAL_FLOOD_PACKET_ID)
+                else if (packetID == INodePacket.INITIAL_FLOOD_PACKET_ID)
                     this.startFlood(new NodePacketFlood(this.data));
 
                 // TODO: More packets... (maybe use switch)

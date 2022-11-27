@@ -33,14 +33,14 @@ public class Streaming extends JFrame implements ActionListener, Runnable
     Timer sTimer; //timer used to send the images at the video frame rate
     byte[] sBuf; //buffer used to store the images to send to the client
 
-    public Streaming(String videoFileName)
+    public Streaming(String videoFileName, String address)
     {
         //init Frame
         super("Servidor");
 
         //show GUI: (opcional!)
-        this.pack();
-        this.setVisible(true);
+        pack();
+        setVisible(true);
 
         this.videoFileName = videoFileName;
 
@@ -52,7 +52,7 @@ public class Streaming extends JFrame implements ActionListener, Runnable
 
         try {
             RTPsocket = new DatagramSocket(); //init RTP socket
-            ClientIPAddr = InetAddress.getByName("127.0.0.1");
+            ClientIPAddr = InetAddress.getByName(address);
             System.out.println("Servidor: socket " + ClientIPAddr);
             video = new VideoStream(this.videoFileName); //init the VideoStream object:
             System.out.println("Servidor: vai enviar video da file " + this.videoFileName);

@@ -122,7 +122,7 @@ public class Main {
             String videoPath = "target/classes/movie.Mjpeg";
             if (Files.exists(Path.of(videoPath)))
             {
-                Streaming streaming = new Streaming(videoPath);
+                Streaming streaming = new Streaming(videoPath, node_1_address);
                 streaming.run();
             }
             else

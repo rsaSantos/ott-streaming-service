@@ -18,7 +18,6 @@ public class Streaming extends JFrame implements ActionListener, Runnable
     //----------------
     DatagramPacket senddp; //UDP packet containing the video frames (to send)A
     DatagramSocket RTPsocket; //socket to be used to send and receive UDP packet
-    int RTP_dest_port = 25000; //destination port for RTP packets
     InetAddress ClientIPAddr; //Client IP address
 
     private final String videoFileName; //video file to request to the server
@@ -109,7 +108,7 @@ public class Streaming extends JFrame implements ActionListener, Runnable
                 rtp_packet.getpacket(packet_bits);
 
                 //send the packet as a DatagramPacket over the UDP socket
-                senddp = new DatagramPacket(packet_bits, packet_length, ClientIPAddr, RTP_dest_port);
+                senddp = new DatagramPacket(packet_bits, packet_length, ClientIPAddr, Main.STREAMING_PORT);
                 RTPsocket.send(senddp);
 
                 System.out.println("[" + LocalDateTime.now() + "]: Sent frame #"+imagenb);

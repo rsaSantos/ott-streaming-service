@@ -9,7 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 
 
-public class NodeState implements Runnable
+public class NodeState
 {
     static class NodeStateComparator implements Comparator<Pair<String, List<Object>>>
     {
@@ -66,11 +66,6 @@ public class NodeState implements Runnable
         streamingState = new ArrayList<>();
     }
 
-    @Override
-    public void run() {
-
-    }
-
     public void update(Pair<String, Object> floodInfo) throws UpdateNodeStateException {
         String address = floodInfo.first();
 
@@ -92,5 +87,10 @@ public class NodeState implements Runnable
         }
         else
             throw new UpdateNodeStateException("[" + LocalDateTime.now() + "]: Object not of type List<?> (origin at [" + address + "])");
+    }
+
+    public String getBestToReceive()
+    {
+        return this.streamingState.isEmpty() ? null : this.streamingState.get(0).first();
     }
 }

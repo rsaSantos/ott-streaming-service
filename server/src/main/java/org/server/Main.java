@@ -1,10 +1,14 @@
 package org.server;
 
+import org.server.streaming.Streaming;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -12,10 +16,11 @@ import java.util.List;
 
 public class Main {
 
-    private static final int PORT = 25000;
+    private static final int BOOTSTRAPPER_PORT = 25000;
+    private static final int CONTROL_PORT = 25000 + 1;
+    public static final int STREAMING_PORT = 25000 + 2;
 
     private static final String ALL_LIST = "ALL NODES HAVE THE LIST!";
-
     private static final String LISTENING = "LISTENING";
     private static final String ALL_LISTENING = "ALL NODES ARE LISTENING!";
     private static final String CONNECTED = "CONNECTED";
@@ -37,7 +42,7 @@ public class Main {
         // Connect with all the nodes
         try
         {
-            ServerSocket ss = new ServerSocket(PORT);
+            ServerSocket ss = new ServerSocket(BOOTSTRAPPER_PORT);
             while (criticalNodes > 0)
             {
                 Socket nodeConnection = ss.accept();
@@ -97,17 +102,32 @@ public class Main {
             }
 
 
+            // Start flooding
+            String node_1_address = "10.0.20.10";
             System.out.println("[" + LocalDateTime.now() + "]: Waiting 10 seconds...");
             Thread.sleep(10000);
             System.out.println("[" + LocalDateTime.now() + "]: Trying to connect with node 1...");
 
-            Socket socket = new Socket("10.0.20.10", 25000 + 1);
+            Socket socket = new Socket(node_1_address, CONTROL_PORT);
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            // TODO: Flood packet
             String payload = "0;" + Instant.now().toEpochMilli();
             dos.writeUTF(payload);
             dos.flush();
             dos.close();
             socket.close();
+            // --------------------------------
+
+            // Start streaming
+            String videoPath = "target/classes/movie.Mjpeg";
+            if (Files.exists(Path.of(videoPath)))
+            {
+                Streaming streaming = new Streaming(videoPath);
+                streaming.run();
+            }
+            else
+                System.err.println("[" + LocalDateTime.now() + "]: Connections closed.");
+
 
             connectedNodes.clear();
             System.out.println("[" + LocalDateTime.now() + "]: Connections closed.");

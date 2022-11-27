@@ -37,7 +37,7 @@ public class StarterSender implements Runnable, IStarter
             {
                 try
                 {
-                    Socket socket = new Socket(address, Main.PORT);
+                    Socket socket = new Socket(address, Main.CONTROL_PORT);
                     System.out.println("[" + LocalDateTime.now() + "]: Connected to host [" + address + "].");
                     this.tryConnection(socket);
                     break;

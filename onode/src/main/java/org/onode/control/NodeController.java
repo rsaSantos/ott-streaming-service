@@ -2,6 +2,7 @@ package org.onode.control;
 
 
 import org.exceptions.UpdateNodeStateException;
+import org.onode.control.packet.NodePacketGeneric;
 import org.onode.control.reader.NodeReceiver;
 import org.onode.control.writer.NodeTask;
 import org.onode.streaming.StreamingController;
@@ -23,6 +24,7 @@ public class NodeController implements Runnable
     public static final Integer OP_READ = 0;
     public static final Integer OP_WRITE = 1;
     public static final Integer OP_CHANGE_STATE = 2;
+    public static final Integer OP_ACTIVATE_STREAM = 3;
 
     private final List<String> adjacents;
     private final ServerSocket serverSocket;
@@ -72,21 +74,10 @@ public class NodeController implements Runnable
         for(Map.Entry<String, Triplet<Socket, DataInputStream, DataOutputStream>> conEntry : this.connectionDataMap.entrySet())
         {
             String address = conEntry.getKey();
-            DataInputStream dis = conEntry.getValue().second();
-
             try
             {
-                System.out.println("[" + LocalDateTime.now() + "]: Processing threads for address [\u001B[32m" + address + "\u001B[0m]...");
-
-                NodeReceiver<DataInputStream> nodeListener = new NodeReceiver<>(this.dataQueue, dis, address);
-                this.nodeReceiverMap.put(address, nodeListener);
-
-                Thread readingThread = new Thread(nodeListener, "read_" + address);
-                this.readerThreadsMap.put(address, readingThread);
-                System.out.println("[" + LocalDateTime.now() + "]: Reading thread created with ID='\u001B[32m" + readingThread.getName() + "\u001B[0m'.");
-
-                System.out.println("[" + LocalDateTime.now() + "]: Starting reading thread...");
-                readingThread.start();
+                NodeReceiver<DataInputStream> nodeListener = new NodeReceiver<>(this.dataQueue, conEntry.getValue().second(), address);
+                startingReceiverThread(nodeListener, address);
             }
             catch (IOException e)
             {
@@ -100,24 +91,28 @@ public class NodeController implements Runnable
             String address = "localhost";
             // Create receiver thread with server socket
             NodeReceiver<ServerSocket> nodeListener = new NodeReceiver<>(this.dataQueue, this.serverSocket ,"localhost");
-            this.nodeReceiverMap.put(address, nodeListener);
-
-            Thread readingThread = new Thread(nodeListener, "read_" + address);
-            this.readerThreadsMap.put(address, readingThread);
-            System.out.println("[" + LocalDateTime.now() + "]: Reading thread created with ID='\u001B[32m" + readingThread.getName() + "\u001B[0m'.");
-
-            System.out.println("[" + LocalDateTime.now() + "]: Starting reading thread...");
-            readingThread.start();
+            startingReceiverThread(nodeListener, address);
         }
         catch (SocketException e)
         {
             System.err.println("[" + LocalDateTime.now() + "]: Failed to create Node Receiver for server socket.");
         }
 
-        // TODO: Streaming
-        StreamingController streamingController = new StreamingController();
+        // Streaming
+        StreamingController streamingController = null;
+        try
+        {
+            streamingController = new StreamingController();
+            Thread streamingControllerThread = new Thread(streamingController, "StreamingController");
+            streamingControllerThread.start();
+        }
+        catch (SocketException e)
+        {
+            System.err.println("[" + LocalDateTime.now() + "]: Failed to create streaming controller.");
+        }
+        assert streamingController != null;
 
-        // TODO: State
+        // Holds streaming state
         NodeState nodeState = new NodeState();
 
         // Wait notification (or timeout) from reading queue updates in threads.
@@ -157,23 +152,10 @@ public class NodeController implements Runnable
                 // From worker threads
                 else if (Objects.equals(operation, OP_WRITE)) 
                 {
-                    String data = (String) dataTriplet.third();
-
                     // Send data to addresses
-                    for(String address : addresses) {
-                        try
-                        {
-                            System.out.println("[" + LocalDateTime.now() + "]: Sending data to " + address);
-                            System.out.println(data);
-                            DataOutputStream dos = this.connectionDataMap.get(address).third();
-                            dos.writeUTF(data);
-                            dos.flush();
-                        }
-                        catch (IOException e)
-                        {
-                            System.err.println("[" + LocalDateTime.now() + "]: Error sending data to [" + address + "].");
-                        }
-                    }
+                    String data = (String) dataTriplet.third();
+                    for(String address : addresses)
+                        this.writeDataTo(data, address);
                 }
                 // From worker threads
                 else if (Objects.equals(operation, OP_CHANGE_STATE)) 
@@ -187,12 +169,54 @@ public class NodeController implements Runnable
                         System.err.println(e.getMessage());
                     }
                 }
+                else if (Objects.equals(operation, OP_ACTIVATE_STREAM))
+                {
+                    // Add a new address to send the stream!
+                    streamingController.add(addresses.get(0));
+
+                    // Propagate the stream to best parent node!
+                    String bestToReceive = nodeState.getBestToReceive();
+
+                    // Create activate packet
+                    String data = NodePacketGeneric.createActivatePacket();
+
+                    // Send packet
+                    this.writeDataTo(data, bestToReceive);
+                }
             }
             catch (InterruptedException e)
             {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private void writeDataTo(String data, String address)
+    {
+        try
+        {
+            System.out.println("[" + LocalDateTime.now() + "]: Sending data to " + address);
+            System.out.println(data);
+            DataOutputStream dos = this.connectionDataMap.get(address).third();
+            dos.writeUTF(data);
+            dos.flush();
+        }
+        catch (IOException e)
+        {
+            System.err.println("[" + LocalDateTime.now() + "]: Error sending data to [" + address + "].");
+        }
+    }
+
+    private void startingReceiverThread(NodeReceiver<?> nodeListener, String address)
+    {
+        this.nodeReceiverMap.put(address, nodeListener);
+
+        Thread readingThread = new Thread(nodeListener, "read_" + address);
+        this.readerThreadsMap.put(address, readingThread);
+        System.out.println("[" + LocalDateTime.now() + "]: Reading thread created with ID='\u001B[32m" + readingThread.getName() + "\u001B[0m'.");
+
+        System.out.println("[" + LocalDateTime.now() + "]: Starting reading thread...");
+        readingThread.start();
     }
 
     private void deleteAddress(String address)

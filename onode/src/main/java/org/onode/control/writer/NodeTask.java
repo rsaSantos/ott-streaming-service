@@ -10,6 +10,7 @@ import org.exceptions.PacketFormatException;
 import org.onode.control.NodeController;
 import org.onode.control.packet.INodePacket;
 import org.onode.control.packet.NodePacketFlood;
+import org.onode.control.packet.NodePacketGeneric;
 import org.onode.utils.*;
 
 import static org.onode.control.packet.INodePacket.ARG_SEP;
@@ -19,7 +20,6 @@ public class NodeTask implements Runnable
     public static int TASK_PACKET = 0;
 
     // TODO:
-    //  Flood - 0; 1
     //  Activate - 2; 3 - Streamer
     //  Refresh - 4
 
@@ -44,6 +44,22 @@ public class NodeTask implements Runnable
         this.dataQueue = dataQueue;
     }
 
+    private void startFlood(NodePacketGeneric floodPacket)
+    {
+        // Create flood packet payload
+        String payload = NodePacketFlood.createFloodPacket(floodPacket.getData());
+
+        try
+        {
+            // Create task to send to all adjacents
+            this.dataQueue.put(new Triplet<>(NodeController.OP_WRITE, this.adjacents, payload));
+        }
+        catch (InterruptedException e)
+        {
+            System.err.println("[" + LocalDateTime.now() + "]: Error updating queue.");
+        }
+    }
+
     private void flood(NodePacketFlood floodPacket)
     {
         try
@@ -55,14 +71,14 @@ public class NodeTask implements Runnable
             List<String> routeAddresses = floodPacket.getAddressRoute();
 
             // Add previous node address
-            routeAddresses.add(address);
+            routeAddresses.add(this.address);
 
             // Create update state request
             // jumps, timestamp, elapsedTime, route
             this.dataQueue.put(
                     new Triplet<>(
                             NodeController.OP_CHANGE_STATE,
-                            Collections.singletonList(address),
+                            Collections.singletonList(this.address),
                             Arrays.asList(jumps, timestamp, elapsedTime, routeAddresses)
                             ));
 
@@ -86,19 +102,21 @@ public class NodeTask implements Runnable
         }
     }
 
-    private void startFlood(NodePacketFlood floodPacket)
+    private void activate()
     {
-        // Create flood packet payload
-        String payload = NodePacketFlood.createFloodPacket(floodPacket.getTimestamp());
-
         try
         {
-            // Create task to send to all adjacents
-            this.dataQueue.put(new Triplet<>(NodeController.OP_WRITE, this.adjacents, payload));
+            // Create task to active stream to given address.
+            this.dataQueue.put(
+                    new Triplet<>(
+                            NodeController.OP_ACTIVATE_STREAM,
+                            Collections.singletonList(this.address),
+                            null
+                    ));
         }
         catch (InterruptedException e)
         {
-            System.err.println("[" + LocalDateTime.now() + "]: Error updating queue.");
+            System.err.println("[" + LocalDateTime.now() + "]: Failed to insert activate stream data into queue for host [" + this.address + "].");
         }
     }
 
@@ -110,16 +128,18 @@ public class NodeTask implements Runnable
             try
             {
                 int packetID = Integer.parseInt(this.data.split(ARG_SEP)[0]);
-                if(packetID == INodePacket.FLOOD_PACKET_ID)
+                if (packetID == INodePacket.FLOOD_PACKET_ID)
                     this.flood(new NodePacketFlood(this.data));
                 else if (packetID == INodePacket.INITIAL_FLOOD_PACKET_ID)
-                    this.startFlood(new NodePacketFlood(this.data));
+                    this.startFlood(new NodePacketGeneric(this.data));
+                else if (packetID == INodePacket.ACTIVATE_PACKET_ID)
+                    this.activate();
 
                 // TODO: More packets... (maybe use switch)
             }
             catch (PacketFormatException e)
             {
-                System.err.println("[" + LocalDateTime.now() + "]: " + e.getMessage() + this.address + "].");
+                System.err.println("[" + LocalDateTime.now() + "]: " + e.getMessage() + "(for host [" + this.address + "]).");
             }
         }
         else

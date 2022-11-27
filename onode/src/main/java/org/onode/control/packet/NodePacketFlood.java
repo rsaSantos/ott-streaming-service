@@ -9,9 +9,6 @@ import java.util.List;
 
 public class NodePacketFlood implements INodePacket
 {
-
-    private final int ID;
-
     // Flood packet
     // ----------------------------
     private final int jumps;
@@ -31,8 +28,8 @@ public class NodePacketFlood implements INodePacket
     public NodePacketFlood(String payload) throws PacketFormatException
     {
         String[] splited = payload.split(ARG_SEP);
-        this.ID = Integer.parseInt(splited[0]);
-        if(this.ID == NodePacketFlood.FLOOD_PACKET_ID && splited.length == 5)
+        int ID = Integer.parseInt(splited[0]);
+        if(ID == NodePacketFlood.FLOOD_PACKET_ID && splited.length == 5)
         {
             this.jumps = Integer.parseInt(splited[1]);
             this.timestamp = Long.parseLong(splited[2]);
@@ -41,21 +38,10 @@ public class NodePacketFlood implements INodePacket
             this.addressRoute = new ArrayList<>();
             this.addressRoute.addAll(Arrays.asList(ips));
         }
-        else if (this.ID == INITIAL_FLOOD_PACKET_ID && splited.length == 2)
-        {
-            this.jumps = 0;
-            this.timestamp = Long.parseLong(splited[1]);
-            this.elapsedTime = 0;
-            this.addressRoute = null;
-        }
         else
-            throw new PacketFormatException("Wrong packet ID!");
+            throw new PacketFormatException("Wrong Flood Packet format!");
     }
 
-    public int getID()
-    {
-        return this.ID;
-    }
     public int getJumps() {
         return jumps;
     }
@@ -89,10 +75,10 @@ public class NodePacketFlood implements INodePacket
                 + String.join(LST_SEP, routeAddresses);
     }
 
-    public static String createFloodPacket(long receivedTimestamp)
+    public static String createFloodPacket(String receivedTimestamp)
     {
         long timestamp = Instant.now().toEpochMilli();
-        long newElapsedTime = (timestamp - receivedTimestamp);
+        long newElapsedTime = (timestamp - Long.parseLong(receivedTimestamp));
         return FLOOD_PACKET_ID + ARG_SEP
                 + 0 + ARG_SEP
                 + timestamp + ARG_SEP

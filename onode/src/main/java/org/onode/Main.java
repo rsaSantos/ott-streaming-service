@@ -18,7 +18,9 @@ import java.util.*;
 public class Main
 {
     public static final String BOOTSTRAPPER_IP = "10.0.20.10";
-    public static final int PORT = 25000 + 1;
+    private static final int BOOTSTRAPPER_PORT = 25000;
+    public static final int CONTROL_PORT = 25000 + 1;
+    public static final int STREAMING_PORT = 25000 + 2;
     private static final String ALL_LIST = "ALL NODES HAVE THE LIST!";
     private static final String LISTENING = "LISTENING";
     private static final String ALL_LISTENING = "ALL NODES ARE LISTENING!";
@@ -29,11 +31,11 @@ public class Main
     {
         try {
             System.out.println("[" + LocalDateTime.now() + "]: Openening TCP server socket...");
-            ServerSocket serverSocket = new ServerSocket(PORT);
-            System.out.println("[" + LocalDateTime.now() + "]: TCP server socket up and running at port " + PORT + ".");
+            ServerSocket serverSocket = new ServerSocket(CONTROL_PORT);
+            System.out.println("[" + LocalDateTime.now() + "]: TCP server socket up and running at port " + CONTROL_PORT + ".");
 
             System.out.println("[" + LocalDateTime.now() + "]: Connecting to server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m]...");
-            Socket socket = new Socket(BOOTSTRAPPER_IP, 25000);
+            Socket socket = new Socket(BOOTSTRAPPER_IP, BOOTSTRAPPER_PORT);
             System.out.println("[" + LocalDateTime.now() + "]: Connected to server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m].");
 
             System.out.println("[" + LocalDateTime.now() + "]: Opening DataInputStream to server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m]...");

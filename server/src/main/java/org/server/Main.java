@@ -104,8 +104,8 @@ public class Main {
 
             // Start flooding
             String node_1_address = "10.0.20.10";
-            System.out.println("[" + LocalDateTime.now() + "]: Waiting 10 seconds...");
-            Thread.sleep(10000);
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting 5 seconds...");
+            Thread.sleep(5000);
             System.out.println("[" + LocalDateTime.now() + "]: Trying to connect with node 1...");
 
             Socket socket = new Socket(node_1_address, CONTROL_PORT);
@@ -122,8 +122,15 @@ public class Main {
             String videoPath = "target/classes/movie.Mjpeg";
             if (Files.exists(Path.of(videoPath)))
             {
-                Streaming streaming = new Streaming(videoPath, node_1_address);
-                streaming.run();
+                Streaming streaming = null;
+                while(true)
+                {
+                    if(streaming == null || !streaming.isStreamOn())
+                    {
+                        streaming = new Streaming(videoPath, node_1_address);
+                        streaming.run();
+                    }
+                }
             }
             else
                 System.err.println("[" + LocalDateTime.now() + "]: Connections closed.");

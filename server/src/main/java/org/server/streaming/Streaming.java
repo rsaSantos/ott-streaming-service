@@ -1,9 +1,12 @@
 package org.server.streaming;
 
+import org.server.Main;
+
 import java.net.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.*;
 import javax.swing.Timer;
 
@@ -34,6 +37,8 @@ public class Streaming extends JFrame implements ActionListener, Runnable
     Timer sTimer; //timer used to send the images at the video frame rate
     byte[] sBuf; //buffer used to store the images to send to the client
 
+    private final AtomicBoolean isStreamOn;
+
     public Streaming(String videoFileName, String address)
     {
         //init Frame
@@ -41,6 +46,7 @@ public class Streaming extends JFrame implements ActionListener, Runnable
 
         this.videoFileName = videoFileName;
         this.address = address;
+        this.isStreamOn = new AtomicBoolean(true);
     }
 
     @Override
@@ -81,6 +87,7 @@ public class Streaming extends JFrame implements ActionListener, Runnable
         label = new JLabel("Send frame #        ", JLabel.CENTER);
         getContentPane().add(label, BorderLayout.CENTER);
 
+        System.out.println("[" + LocalDateTime.now() + "]: Starting timer...");
         sTimer.start();
     }
 
@@ -128,6 +135,14 @@ public class Streaming extends JFrame implements ActionListener, Runnable
         {
             //if we have reached the end of the video file, stop the timer
             sTimer.stop();
+            setVisible(false);
+            dispose();
+            this.isStreamOn.set(false);
         }
+    }
+
+    public boolean isStreamOn()
+    {
+        return this.isStreamOn.get();
     }
 }

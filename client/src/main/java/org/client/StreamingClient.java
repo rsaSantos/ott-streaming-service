@@ -32,10 +32,12 @@ public class StreamingClient implements Runnable
     byte[] cBuf; //buffer used to store data received from the server
 
     private final String nodeAddress;
+    private final String myAddress;
 
-    public StreamingClient(String nodeAddress)
+    public StreamingClient(String myAddress, String nodeAddress)
     {
         DatagramSocket RTPsocket1;
+        this.myAddress = myAddress;
         this.nodeAddress = nodeAddress;
         this.jFrame = new JFrame("Cliente de Testes");
         this.setupButton = new JButton("Setup");
@@ -121,7 +123,7 @@ public class StreamingClient implements Runnable
         public void actionPerformed(ActionEvent e)
         {
             // Sending activate packet to node address
-            String payload = "2;";
+            String payload = "2;" + myAddress;
             try {
                 Socket socket = new Socket(InetAddress.getByName(nodeAddress), Main.CONTROL_PORT);
                 DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
@@ -144,7 +146,10 @@ public class StreamingClient implements Runnable
     //Handler for tear button
     //-----------------------
     class tearButtonListener implements ActionListener {
-        public void actionPerformed(ActionEvent e){
+        public void actionPerformed(ActionEvent e)
+        {
+
+            // TODO: Send DEACTIVATE_PACKET to node.
 
             System.out.println("[" + LocalDateTime.now() + "]: Teardown Button pressed !");
             //stop the timer

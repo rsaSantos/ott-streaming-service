@@ -21,6 +21,7 @@ import java.util.concurrent.*;
 public class NodeController implements Runnable
 {
     public static final String DELETE_ME = "8D3rL2=E?2T.-E!"; // Some random string
+    public static final String IGNORE = "IgNoReMe"; // Some random string
     public static final Integer OP_READ = 0;
     public static final Integer OP_WRITE = 1;
     public static final Integer OP_CHANGE_STATE = 2;
@@ -176,12 +177,17 @@ public class NodeController implements Runnable
 
                     // Propagate the stream to best parent node!
                     String bestToReceive = nodeState.getBestToReceive();
+                    if(bestToReceive != null)
+                    {
+                        // TODO: Get the correct interface address
+                        //  or just use a value to be ignored for now...
 
-                    // Create activate packet
-                    String data = NodePacketGeneric.createActivatePacket();
+                        // Create activate packet
+                        String data = NodePacketGeneric.createActivatePacket(IGNORE);
 
-                    // Send packet
-                    this.writeDataTo(data, bestToReceive);
+                        // Send packet
+                        this.writeDataTo(data, bestToReceive);
+                    }
                 }
             }
             catch (InterruptedException e)
@@ -196,7 +202,6 @@ public class NodeController implements Runnable
         try
         {
             System.out.println("[" + LocalDateTime.now() + "]: Sending data to " + address);
-            System.out.println(data);
             DataOutputStream dos = this.connectionDataMap.get(address).third();
             dos.writeUTF(data);
             dos.flush();

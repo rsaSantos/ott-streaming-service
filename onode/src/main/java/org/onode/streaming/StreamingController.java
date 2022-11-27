@@ -31,7 +31,9 @@ public class StreamingController implements Runnable
                 byte[] buffer = new byte[BUFFER_SIZE];
                 DatagramPacket rcvPacket = new DatagramPacket(buffer, buffer.length);
                 try {
+                    // System.out.println("[" + LocalDateTime.now() + "]: Waiting for stream packets...");
                     socket.receive(rcvPacket);
+                    // System.out.println("[" + LocalDateTime.now() + "]: Received stream packet.");
                 } catch (IOException e) {
                     System.err.println("[" + LocalDateTime.now() + "]: Error receiving datagram packet.");
                 }
@@ -42,7 +44,9 @@ public class StreamingController implements Runnable
                     try {
                         DatagramPacket sendPacket = new DatagramPacket(buffer, lenghtReceived, InetAddress.getByName(address), Main.STREAMING_PORT);
                         this.socket.send(sendPacket);
-                    } catch (IOException e) {
+                        // System.out.println("[" + LocalDateTime.now() + "]: Sent streaming packet to [" + address + "].");
+                    }
+                    catch (IOException e) {
                         System.err.println("[" + LocalDateTime.now() + "]: Error sending datagram packet to host [" + address + "]");
                     }
                 }

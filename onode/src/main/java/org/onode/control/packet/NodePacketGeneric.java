@@ -12,10 +12,8 @@ public class NodePacketGeneric implements INodePacket
     {
         String[] splited = payload.split(ARG_SEP);
         this.ID = Integer.parseInt(splited[0]);
-        if (this.ID == INITIAL_FLOOD_PACKET_ID && splited.length == 2)
+        if ((this.ID == INITIAL_FLOOD_PACKET_ID || this.ID == ACTIVATE_PACKET_ID) && splited.length == 2)
             this.data = splited[1];
-        else if (this.ID == ACTIVATE_PACKET_ID)
-            this.data = null;
         else
             throw new PacketFormatException("Wrong generic packet format!");
     }
@@ -25,8 +23,8 @@ public class NodePacketGeneric implements INodePacket
         return this.data;
     }
 
-    public static String createActivatePacket()
+    public static String createActivatePacket(String addressToActivate)
     {
-        return ACTIVATE_PACKET_ID + ARG_SEP;
+        return ACTIVATE_PACKET_ID + ARG_SEP + addressToActivate;
     }
 }

@@ -13,6 +13,7 @@ import org.onode.control.packet.NodePacketFlood;
 import org.onode.control.packet.NodePacketGeneric;
 import org.onode.utils.*;
 
+import static org.onode.control.NodeController.IGNORE;
 import static org.onode.control.packet.INodePacket.ARG_SEP;
 
 public class NodeTask implements Runnable
@@ -102,15 +103,19 @@ public class NodeTask implements Runnable
         }
     }
 
-    private void activate()
+    private void activate(NodePacketGeneric activationPacket)
     {
         try
         {
+            String addressToActivate = activationPacket.getData();
+            if(addressToActivate.equals(IGNORE))
+                addressToActivate = this.address;
+
             // Create task to active stream to given address.
             this.dataQueue.put(
                     new Triplet<>(
                             NodeController.OP_ACTIVATE_STREAM,
-                            Collections.singletonList(this.address),
+                            Collections.singletonList(addressToActivate),
                             null
                     ));
         }
@@ -133,7 +138,7 @@ public class NodeTask implements Runnable
                 else if (packetID == INodePacket.INITIAL_FLOOD_PACKET_ID)
                     this.startFlood(new NodePacketGeneric(this.data));
                 else if (packetID == INodePacket.ACTIVATE_PACKET_ID)
-                    this.activate();
+                    this.activate(new NodePacketGeneric(this.data));
 
                 // TODO: More packets... (maybe use switch)
             }

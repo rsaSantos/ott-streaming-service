@@ -10,8 +10,8 @@ public class VideoStream {
     //-----------------------------------
     //constructor
     //-----------------------------------
-    public VideoStream(String filename) throws Exception{
-
+    public VideoStream(String filename) throws Exception
+    {
         //init variables
         fis = new FileInputStream(filename);
         frame_nb = 0;

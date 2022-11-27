@@ -3,6 +3,7 @@ package org.server.streaming;
 import java.net.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.time.LocalDateTime;
 import javax.swing.*;
 import javax.swing.Timer;
 
@@ -21,6 +22,7 @@ public class Streaming extends JFrame implements ActionListener, Runnable
     InetAddress ClientIPAddr; //Client IP address
 
     private final String videoFileName; //video file to request to the server
+    private final String address;   // adress to send packets
 
     //Video constants:
     //------------------
@@ -38,11 +40,16 @@ public class Streaming extends JFrame implements ActionListener, Runnable
         //init Frame
         super("Servidor");
 
+        this.videoFileName = videoFileName;
+        this.address = address;
+    }
+
+    @Override
+    public void run()
+    {
         //show GUI: (opcional!)
         pack();
         setVisible(true);
-
-        this.videoFileName = videoFileName;
 
         // init para a parte do servidor
         sTimer = new Timer(FRAME_PERIOD, this); //init Timer para servidor
@@ -53,14 +60,14 @@ public class Streaming extends JFrame implements ActionListener, Runnable
         try {
             RTPsocket = new DatagramSocket(); //init RTP socket
             ClientIPAddr = InetAddress.getByName(address);
-            System.out.println("Servidor: socket " + ClientIPAddr);
             video = new VideoStream(this.videoFileName); //init the VideoStream object:
-            System.out.println("Servidor: vai enviar video da file " + this.videoFileName);
-
-        } catch (SocketException e) {
-            System.out.println("Servidor: erro no socket: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Servidor: erro no video: " + e.getMessage());
+            System.out.println("[" + LocalDateTime.now() + "]: Video '" + this.videoFileName + "' will be sent.");
+        }
+        catch (SocketException e) {
+            System.err.println("[" + LocalDateTime.now() + "]: Socket error: " + e.getMessage());
+        }
+        catch (Exception e) {
+            System.err.println("[" + LocalDateTime.now() + "]: Video error: " + e.getMessage());
         }
 
         //Handler to close the main window
@@ -76,12 +83,6 @@ public class Streaming extends JFrame implements ActionListener, Runnable
         getContentPane().add(label, BorderLayout.CENTER);
 
         sTimer.start();
-    }
-
-    @Override
-    public void run()
-    {
-
     }
 
     @Override
@@ -111,7 +112,7 @@ public class Streaming extends JFrame implements ActionListener, Runnable
                 senddp = new DatagramPacket(packet_bits, packet_length, ClientIPAddr, RTP_dest_port);
                 RTPsocket.send(senddp);
 
-                System.out.println("Send frame #"+imagenb);
+                System.out.println("[" + LocalDateTime.now() + "]: Sent frame #"+imagenb);
                 //print the header bitstream
                 rtp_packet.printheader();
 
@@ -120,7 +121,7 @@ public class Streaming extends JFrame implements ActionListener, Runnable
             }
             catch(Exception ex)
             {
-                System.out.println("Exception caught: "+ex);
+                System.err.println("[" + LocalDateTime.now() + "]: Exception caught: " + ex.getMessage());
                 System.exit(0);
             }
         }

@@ -18,7 +18,7 @@ public class Main {
 
     private static final int BOOTSTRAPPER_PORT = 25000;
     private static final int CONTROL_PORT = 25000 + 1;
-    public static final int STREAMING_PORT = 25000 + 2;
+    public static final int INTERNAL_STREAMING_PORT = 25000 + 2;
 
     private static final String ALL_LIST = "ALL NODES HAVE THE LIST!";
     private static final String LISTENING = "LISTENING";
@@ -30,7 +30,7 @@ public class Main {
     {
         // Read the configuration file.
         System.out.println("[" + LocalDateTime.now() + "]: Reading config file...");
-        Overlay overlay = new Overlay("target/classes/test_config.json");
+        Overlay overlay = new Overlay("target/classes/test_medium_config.json");
         System.out.println("[" + LocalDateTime.now() + "]: Config file processed successfully!");
 
         // Get number of nodes: all and critical.

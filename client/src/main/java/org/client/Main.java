@@ -7,7 +7,7 @@ public class Main {
     public static final int STREAMING_PORT = 25000 + 2;
     public static final int CONTROL_PORT = 25000 + 1;
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws InterruptedException
     {
         if(args.length != 2)
         {

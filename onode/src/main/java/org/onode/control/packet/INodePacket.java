@@ -5,6 +5,7 @@ public interface INodePacket
     int INITIAL_FLOOD_PACKET_ID = 0;
     int FLOOD_PACKET_ID = 1;
     int ACTIVATE_PACKET_ID = 2;
+    int DEACTIVATE_PACKET_ID = 3;
 
     // TODO:
     //  Flood - 0; 1

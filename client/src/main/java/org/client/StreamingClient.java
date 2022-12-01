@@ -123,11 +123,10 @@ public class StreamingClient implements Runnable
         public void actionPerformed(ActionEvent e)
         {
             // Sending activate packet to node address
-            String payload = "2;" + myAddress;
             try {
                 Socket socket = new Socket(InetAddress.getByName(nodeAddress), Main.CONTROL_PORT);
                 DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-                dos.writeUTF(payload);
+                dos.writeUTF("2;" + myAddress);
                 dos.flush();
                 dos.close();
                 socket.close();
@@ -148,10 +147,24 @@ public class StreamingClient implements Runnable
     class tearButtonListener implements ActionListener {
         public void actionPerformed(ActionEvent e)
         {
-
-            // TODO: Send DEACTIVATE_PACKET to node.
-
             System.out.println("[" + LocalDateTime.now() + "]: Teardown Button pressed !");
+
+            // Send DEACTIVATE_PACKET to node.
+            try
+            {
+                Socket socket = new Socket(InetAddress.getByName(nodeAddress), Main.CONTROL_PORT);
+                DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                dos.writeUTF("3;" + myAddress);
+                dos.flush();
+                dos.close();
+                socket.close();
+                System.out.println("[" + LocalDateTime.now() + "]: Sent deactivation packet to [" + nodeAddress + "].");
+            }
+            catch (IOException ex)
+            {
+                System.err.println("[" + LocalDateTime.now() + "]: Error sending deactivation packet.");
+            }
+
             //stop the timer
             cTimer.stop();
             //exit

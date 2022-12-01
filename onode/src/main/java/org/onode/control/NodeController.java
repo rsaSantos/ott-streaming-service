@@ -22,10 +22,11 @@ public class NodeController implements Runnable
 {
     public static final String DELETE_ME = "8D3rL2=E?2T.-E!"; // Some random string
     public static final String IGNORE = "IgNoReMe"; // Some random string
-    public static final Integer OP_READ = 0;
-    public static final Integer OP_WRITE = 1;
-    public static final Integer OP_CHANGE_STATE = 2;
-    public static final Integer OP_ACTIVATE_STREAM = 3;
+    public static final int OP_READ = 0;
+    public static final int OP_WRITE = 1;
+    public static final int OP_CHANGE_STATE = 2;
+    public static final int OP_ACTIVATE_STREAM = 3;
+    public static final int OP_DEACTIVATE_STREAM = 4;
 
     private final List<String> adjacents;
     private final ServerSocket serverSocket;
@@ -117,10 +118,8 @@ public class NodeController implements Runnable
         NodeState nodeState = new NodeState();
 
         // Wait notification (or timeout) from reading queue updates in threads.
-        while(!this.readerThreadsMap.isEmpty())
-        {
-            try
-            {
+        while(!this.readerThreadsMap.isEmpty()) {
+            try {
                 // Wait until some reading thread reads something...
                 // TODO: (If more than one thread is reading from this queue consider using ConcurrentLinkedQueue.)
                 System.out.println("[" + LocalDateTime.now() + "]: Main thread waiting for data...");
@@ -133,13 +132,10 @@ public class NodeController implements Runnable
                 if (Objects.equals(operation, OP_READ))
                 {
                     String data = (String) dataTriplet.third();
-                    if(data.equals(DELETE_ME))
-                    {
-                        for(String address : addresses)
+                    if (data.equals(DELETE_ME)) {
+                        for (String address : addresses)
                             this.deleteAddress(address);
-                    }
-                    else
-                    {
+                    } else {
                         // TODO: Add task for thread pool. (Update constructor!)
                         this.threadPoolExecutor.execute(new NodeTask(
                                 NodeTask.TASK_PACKET,
@@ -151,34 +147,29 @@ public class NodeController implements Runnable
                     }
                 }
                 // From worker threads
-                else if (Objects.equals(operation, OP_WRITE)) 
+                else if (Objects.equals(operation, OP_WRITE))
                 {
                     // Send data to addresses
                     String data = (String) dataTriplet.third();
-                    for(String address : addresses)
+                    for (String address : addresses)
                         this.writeDataTo(data, address);
                 }
                 // From worker threads
-                else if (Objects.equals(operation, OP_CHANGE_STATE)) 
+                else if (Objects.equals(operation, OP_CHANGE_STATE))
                 {
-                    try
-                    {
+                    try {
                         nodeState.update(new Pair<>(addresses.get(0), dataTriplet.third()));
-                    }
-                    catch (UpdateNodeStateException e)
-                    {
+                    } catch (UpdateNodeStateException e) {
                         System.err.println(e.getMessage());
                     }
-                }
-                else if (Objects.equals(operation, OP_ACTIVATE_STREAM))
+                } else if (Objects.equals(operation, OP_ACTIVATE_STREAM))
                 {
                     // Add a new address to send the stream!
                     streamingController.add(addresses.get(0));
 
                     // Propagate the stream to best parent node!
                     String bestToReceive = nodeState.getBestToReceive();
-                    if(bestToReceive != null)
-                    {
+                    if (bestToReceive != null) {
                         // TODO: Get the correct interface address
                         //  or just use a value to be ignored for now...
 
@@ -188,10 +179,26 @@ public class NodeController implements Runnable
                         // Send packet
                         this.writeDataTo(data, bestToReceive);
                     }
+                } else if (Objects.equals(operation, OP_DEACTIVATE_STREAM))
+                {
+                    // Remove address from streaming list.
+                    boolean isLast = streamingController.remove(addresses.get(0));
+
+                    // If we have no more nodes to send, send deactivate packets to other neighbours
+                    if(isLast)
+                    {
+                        String bestToReceive = nodeState.getBestToReceive();
+                        if(bestToReceive != null)
+                        {
+                            // Create deactivation packet
+                            String data = NodePacketGeneric.createDeactivatePacket(IGNORE);
+
+                            // Send packet
+                            this.writeDataTo(data, bestToReceive);
+                        }
+                    }
                 }
-            }
-            catch (InterruptedException e)
-            {
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }

@@ -125,6 +125,28 @@ public class NodeTask implements Runnable
         }
     }
 
+    private void deactivate(NodePacketGeneric deactivationPacket)
+    {
+        try
+        {
+            String addressToDeactivate = deactivationPacket.getData();
+            if(addressToDeactivate.equals(IGNORE))
+                addressToDeactivate = this.address;
+
+            // Create task to active stream to given address.
+            this.dataQueue.put(
+                    new Triplet<>(
+                            NodeController.OP_DEACTIVATE_STREAM,
+                            Collections.singletonList(addressToDeactivate),
+                            null
+                    ));
+        }
+        catch (InterruptedException e)
+        {
+            System.err.println("[" + LocalDateTime.now() + "]: Failed to insert deactivate stream data into queue for host [" + this.address + "].");
+        }
+    }
+
     @Override
     public void run() 
     {
@@ -139,6 +161,8 @@ public class NodeTask implements Runnable
                     this.startFlood(new NodePacketGeneric(this.data));
                 else if (packetID == INodePacket.ACTIVATE_PACKET_ID)
                     this.activate(new NodePacketGeneric(this.data));
+                else if (packetID == INodePacket.DEACTIVATE_PACKET_ID)
+                    this.deactivate(new NodePacketGeneric(this.data));
 
                 // TODO: More packets... (maybe use switch)
             }

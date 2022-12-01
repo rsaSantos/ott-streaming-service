@@ -65,16 +65,23 @@ public class NodeReceiver<L> extends AbstractNodeReader
         }
         else if(this.listener instanceof ServerSocket)
         {
+            Socket socket = null;
             try
             {
                 System.out.println("[" + LocalDateTime.now() + "]: Waiting for data from [" + super.getAddress() + "].");
-                Socket socket = ((ServerSocket) this.listener).accept();
+                socket = ((ServerSocket) this.listener).accept();
                 DataInputStream dis = new DataInputStream(socket.getInputStream());
                 data = dis.readUTF();
             }
+            catch (SocketException socketException)
+            {
+                if(socket != null && socket.isClosed())
+                    data = NodeController.DELETE_ME;
+                System.err.println("[" + LocalDateTime.now() + "]: Socket exception. Closing [" + super.getAddress() + "].");
+            }
             catch (IOException e)
             {
-                e.printStackTrace();
+                System.err.println("[" + LocalDateTime.now() + "]: Error while creating DataInputStream for address [" + super.getAddress() + "].");
             }
         }
 

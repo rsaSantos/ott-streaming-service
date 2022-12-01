@@ -48,7 +48,7 @@ public class NodeController implements Runnable
     )
     {
         this.serverSocket = serverSocket;
-        this.connectionDataMap = connectionDataMap;
+        this.connectionDataMap = Collections.synchronizedMap(connectionDataMap);
         this.nodeReceiverMap = new HashMap<>();
         this.readerThreadsMap = new HashMap<>();
         this.adjacents = new ArrayList<>(adjacents);
@@ -72,22 +72,21 @@ public class NodeController implements Runnable
         // Behaviour on exit...(closing sockets)
         this.createShutdownHook();
 
-        // Setup reading threads/instances and writing instances.
-        for(Map.Entry<String, Triplet<Socket, DataInputStream, DataOutputStream>> conEntry : this.connectionDataMap.entrySet())
+        synchronized (this.connectionDataMap)
         {
-            String address = conEntry.getKey();
-            try
+            // Setup reading threads/instances and writing instances.
+            for (Map.Entry<String, Triplet<Socket, DataInputStream, DataOutputStream>> conEntry : this.connectionDataMap.entrySet())
             {
-                NodeReceiver<DataInputStream> nodeListener = new NodeReceiver<>(this.dataQueue, conEntry.getValue().second(), address);
-                startingReceiverThread(nodeListener, address);
-            }
-            catch (IOException e)
-            {
-                System.err.println("[" + LocalDateTime.now() + "]: Failed to get input/output stream for address [" + address + "] .");
-                e.printStackTrace();
+                String address = conEntry.getKey();
+                try {
+                    NodeReceiver<DataInputStream> nodeListener = new NodeReceiver<>(this.dataQueue, conEntry.getValue().second(), address);
+                    startingReceiverThread(nodeListener, address);
+                } catch (IOException e) {
+                    System.err.println("[" + LocalDateTime.now() + "]: Failed to get input/output stream for address [" + address + "] .");
+                    e.printStackTrace();
+                }
             }
         }
-
         try
         {
             String address = "localhost";
@@ -206,12 +205,14 @@ public class NodeController implements Runnable
 
     private void writeDataTo(String data, String address)
     {
-        try
-        {
-            System.out.println("[" + LocalDateTime.now() + "]: Sending data to " + address);
-            DataOutputStream dos = this.connectionDataMap.get(address).third();
-            dos.writeUTF(data);
-            dos.flush();
+        try {
+            synchronized (this.connectionDataMap)
+            {
+                System.out.println("[" + LocalDateTime.now() + "]: Sending data to " + address);
+                DataOutputStream dos = this.connectionDataMap.get(address).third();
+                dos.writeUTF(data);
+                dos.flush();
+            }
         }
         catch (IOException e)
         {
@@ -240,7 +241,14 @@ public class NodeController implements Runnable
         this.readerThreadsMap.remove(address);
         this.nodeReceiverMap.remove(address);
 
-        Triplet<Socket, DataInputStream, DataOutputStream> conData = this.connectionDataMap.get(address);
+        Triplet<Socket, DataInputStream, DataOutputStream> conData = null;
+        synchronized (this.connectionDataMap)
+        {
+             conData = this.connectionDataMap.get(address);
+        }
+
+        if(conData == null)
+            return;
 
         DataOutputStream dos = conData.third();
         if(dos != null) {
@@ -263,11 +271,13 @@ public class NodeController implements Runnable
             e.printStackTrace();
         }
 
-        this.connectionDataMap.remove(address);
+        synchronized (this.connectionDataMap)
+        {
+            this.connectionDataMap.remove(address);
+        }
         System.out.println("[" + LocalDateTime.now() + "]: Removed host [" + address + "].");
     }
 
-    // TODO: Test this...is it needed?
     private void createShutdownHook()
     {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -276,30 +286,29 @@ public class NodeController implements Runnable
                 // TODO: later coordinate this shutdown
                 this.threadPoolExecutor.shutdown();
 
-                for(Map.Entry<String, Triplet<Socket, DataInputStream, DataOutputStream>> conEntry : this.connectionDataMap.entrySet())
+                synchronized (this.connectionDataMap)
                 {
+                    for(Map.Entry<String, Triplet<Socket, DataInputStream, DataOutputStream>> conEntry : this.connectionDataMap.entrySet()) {
 
-                    DataOutputStream dos = conEntry.getValue().third();
-                    try
-                    {
-                        dos.writeUTF(DELETE_ME);
-                        dos.flush();
-                        dos.close();
+                        DataOutputStream dos = conEntry.getValue().third();
+                        try {
+                            dos.writeUTF(DELETE_ME);
+                            dos.flush();
+                            dos.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        DataInputStream dis = conEntry.getValue().second();
+                        dis.close();
+
+                        Socket socket = conEntry.getValue().first();
+                        socket.close();
                     }
-                    catch (IOException e)
-                    {
-                        e.printStackTrace();
-                    }
 
-                    DataInputStream dis = conEntry.getValue().second();
-                    dis.close();
-
-                    Socket socket = conEntry.getValue().first();
-                    socket.close();
+                    this.connectionDataMap.clear();
                 }
 
-                this.connectionDataMap.clear();
-                this.readerThreadsMap.clear();
                 this.nodeReceiverMap.clear();
                 this.readerThreadsMap.clear();
 

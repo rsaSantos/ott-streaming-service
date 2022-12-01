@@ -1,4 +1,13 @@
 # OTP-streaming
 Over the Top multimedia streaming service implemented in Java.
 
-Run with command "mvn package".
+Run commands
+
+server: su - core -c "export DISPLAY=:0.0 && cd server/ && mvn clean package"
+
+onode: su - core -c "cd onode/ && mvn clean package"
+
+client: su - core -c "export DISPLAY=:0.0 && cd client/ && mvn clean package -DmyAddress=0.0.0.0 -DnodeAddress=0.0.0.0"
+
+Note: 
+* Use -DmyAddress=localhost and -DnodeAddress=localhost  if the client is being executed in the same container as a node. Specifically use the string "localhost"!

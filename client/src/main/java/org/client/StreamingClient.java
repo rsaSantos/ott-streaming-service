@@ -33,12 +33,14 @@ public class StreamingClient implements Runnable
 
     private final String nodeAddress;
     private final String myAddress;
+    private final int STREAMING_PORT;
 
-    public StreamingClient(String myAddress, String nodeAddress)
+    public StreamingClient(String myAddress, String nodeAddress, int STREAMING_PORT)
     {
         DatagramSocket RTPsocket1;
         this.myAddress = myAddress;
         this.nodeAddress = nodeAddress;
+        this.STREAMING_PORT = STREAMING_PORT;
         this.jFrame = new JFrame("Cliente de Testes");
         this.setupButton = new JButton("Setup");
         this.playButton = new JButton("Play");
@@ -55,9 +57,10 @@ public class StreamingClient implements Runnable
         cTimer.setCoalesce(true);
         cBuf = new byte[15000]; //allocate enough memory for the buffer used to receive data from the server
 
-        try {
+        try
+        {
             // socket e video
-            RTPsocket1 = new DatagramSocket(Main.STREAMING_PORT); //init RTP socket (o mesmo para o cliente e servidor)
+            RTPsocket1 = new DatagramSocket(this.STREAMING_PORT); //init RTP socket (o mesmo para o cliente e servidor)
             RTPsocket1.setSoTimeout(5000); // setimeout to 5s
         }
         catch (SocketException e) {

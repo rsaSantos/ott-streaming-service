@@ -20,7 +20,8 @@ public class Main
     public static final String BOOTSTRAPPER_IP = "10.0.20.10";
     private static final int BOOTSTRAPPER_PORT = 25000;
     public static final int CONTROL_PORT = 25000 + 1;
-    public static final int STREAMING_PORT = 25000 + 2;
+    public static final int STREAMING_PORT_EXTERNAL = 25000 + 2;
+    public static final int STREAMING_PORT_LOCALHOST = 25000 + 3;
     private static final String ALL_LIST = "ALL NODES HAVE THE LIST!";
     private static final String LISTENING = "LISTENING";
     private static final String ALL_LISTENING = "ALL NODES ARE LISTENING!";

@@ -22,7 +22,7 @@ public class StreamingController implements Runnable
         this.addressesToSend = new HashSet<>();
         this.toBeAdded = Collections.synchronizedSet(new HashSet<>());
         this.toBeRemoved = Collections.synchronizedSet(new HashSet<>());
-        this.socket = new DatagramSocket(Main.STREAMING_PORT);
+        this.socket = new DatagramSocket(Main.STREAMING_PORT_EXTERNAL);
         isLast = new AtomicBoolean(false);
     }
 
@@ -37,7 +37,7 @@ public class StreamingController implements Runnable
                 DatagramPacket rcvPacket = new DatagramPacket(buffer, buffer.length);
                 try
                 {
-                    socket.receive(rcvPacket);
+                    this.socket.receive(rcvPacket);
                 }
                 catch (IOException e)
                 {
@@ -49,7 +49,11 @@ public class StreamingController implements Runnable
                     // Send packet
                     try
                     {
-                        DatagramPacket sendPacket = new DatagramPacket(buffer, lenghtReceived, InetAddress.getByName(address), Main.STREAMING_PORT);
+                        int PORT = Main.STREAMING_PORT_EXTERNAL;
+                        if(address.equals("localhost"))
+                            PORT = Main.STREAMING_PORT_LOCALHOST;
+
+                        DatagramPacket sendPacket = new DatagramPacket(buffer, lenghtReceived, InetAddress.getByName(address), PORT);
                         this.socket.send(sendPacket);
                         System.out.println("[" + LocalDateTime.now() + "]: Sent streaming packet to [" + address + "].");
                     }

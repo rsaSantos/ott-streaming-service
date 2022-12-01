@@ -115,7 +115,7 @@ public class Streaming extends JFrame implements ActionListener, Runnable
                 rtp_packet.getpacket(packet_bits);
 
                 //send the packet as a DatagramPacket over the UDP socket
-                senddp = new DatagramPacket(packet_bits, packet_length, ClientIPAddr, Main.STREAMING_PORT);
+                senddp = new DatagramPacket(packet_bits, packet_length, ClientIPAddr, Main.INTERNAL_STREAMING_PORT);
                 RTPsocket.send(senddp);
 
                 System.out.println("[" + LocalDateTime.now() + "]: Sent frame #"+imagenb);

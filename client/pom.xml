@@ -32,8 +32,10 @@
                 <configuration>
                     <mainClass>org.client.Main</mainClass>
                     <arguments>
-                        <argument>10.0.12.20</argument>
-                        <argument>10.0.11.2</argument>
+                        <!--suppress UnresolvedMavenProperty -->
+                        <argument>${myAddress}</argument>
+                        <!--suppress UnresolvedMavenProperty -->
+                        <argument>${nodeAddress}</argument>
                     </arguments>
                 </configuration>
             </plugin>

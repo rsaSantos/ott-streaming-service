@@ -161,7 +161,8 @@ public class NodeController implements Runnable
                     } catch (UpdateNodeStateException e) {
                         System.err.println(e.getMessage());
                     }
-                } else if (Objects.equals(operation, OP_ACTIVATE_STREAM))
+                }
+                else if (Objects.equals(operation, OP_ACTIVATE_STREAM))
                 {
                     // Add a new address to send the stream!
                     streamingController.add(addresses.get(0));

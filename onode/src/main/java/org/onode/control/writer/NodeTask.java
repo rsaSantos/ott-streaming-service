@@ -45,10 +45,10 @@ public class NodeTask implements Runnable
         this.dataQueue = dataQueue;
     }
 
-    private void startFlood(NodePacketGeneric floodPacket)
+    private void startFlood(NodePacketFlood floodPacket)
     {
         // Create flood packet payload
-        String payload = NodePacketFlood.createFloodPacket(floodPacket.getData());
+        String payload = NodePacketFlood.createFloodPacket(floodPacket.getServerID(), floodPacket.getTimestamp());
 
         try
         {
@@ -66,6 +66,7 @@ public class NodeTask implements Runnable
         try
         {
             // Get data
+            String serverID = floodPacket.getServerID();
             int jumps = floodPacket.getJumps();
             long timestamp = floodPacket.getTimestamp();
             long elapsedTime = floodPacket.getElapsedTime();
@@ -80,14 +81,14 @@ public class NodeTask implements Runnable
                     new Triplet<>(
                             NodeController.OP_CHANGE_STATE,
                             Collections.singletonList(this.address),
-                            Arrays.asList(jumps, timestamp, elapsedTime, routeAddresses)
+                            Arrays.asList(serverID, jumps, timestamp, elapsedTime, routeAddresses)
                             ));
 
             // Increment jumps
             jumps++;
 
             // Create packet
-            String payload = NodePacketFlood.createFloodPacket(timestamp, elapsedTime, jumps, routeAddresses);
+            String payload = NodePacketFlood.createFloodPacket(serverID, timestamp, elapsedTime, jumps, routeAddresses);
 
             // Get list of nodes to send inside payload
             List<String> nodesToSend = new ArrayList<>(this.adjacents);
@@ -158,7 +159,7 @@ public class NodeTask implements Runnable
                 if (packetID == INodePacket.FLOOD_PACKET_ID)
                     this.flood(new NodePacketFlood(this.data));
                 else if (packetID == INodePacket.INITIAL_FLOOD_PACKET_ID)
-                    this.startFlood(new NodePacketGeneric(this.data));
+                    this.startFlood(new NodePacketFlood(this.data));
                 else if (packetID == INodePacket.ACTIVATE_PACKET_ID)
                     this.activate(new NodePacketGeneric(this.data));
                 else if (packetID == INodePacket.DEACTIVATE_PACKET_ID)

@@ -29,16 +29,15 @@ public class NodeState
                 Pair<String, List<Object>> floodInfo_2)
         {
             // Get data
-            // (int)jumps, (long)timestamp, (long)elapsedTime, (List<String>)route
+            // (String)serverID, (int)jumps, (long)timestamp, (long)elapsedTime, (List<String>)route
+            int jumps_1 = (int) floodInfo_1.second().get(1);
+            int jumps_2 = (int) floodInfo_2.second().get(2);
 
-            int jumps_1 = (int) floodInfo_1.second().get(0);
-            int jumps_2 = (int) floodInfo_2.second().get(0);
+            long timestamp_1 = (long) floodInfo_1.second().get(2);
+            long timestamp_2 = (long) floodInfo_2.second().get(2);
 
-            long timestamp_1 = (long) floodInfo_1.second().get(1);
-            long timestamp_2 = (long) floodInfo_2.second().get(1);
-
-            long elapsedTime_1 = (long) floodInfo_1.second().get(2);
-            long elapsedTime_2 = (long) floodInfo_2.second().get(2);
+            long elapsedTime_1 = (long) floodInfo_1.second().get(3);
+            long elapsedTime_2 = (long) floodInfo_2.second().get(3);
 
             int timestampCompare = Long.compare(timestamp_1, timestamp_2);
             boolean timestampRelation = equalsWithError(timestampCompare, timestamp_1, timestamp_2);
@@ -66,15 +65,16 @@ public class NodeState
         streamingState = new ArrayList<>();
     }
 
-    public void update(Pair<String, Object> floodInfo) throws UpdateNodeStateException {
+    public void update(Pair<String, Object> floodInfo) throws UpdateNodeStateException
+    {
         String address = floodInfo.first();
 
         if(floodInfo.second() instanceof List<?>)
         {
             List<Object> data = (List<Object>) floodInfo.second();
-            if(data.size() == 4)
+            if(data.size() == 5)
             {
-                if(data.get(3) instanceof List<?>)
+                if(data.get(4) instanceof List<?>)
                 {
                     this.streamingState.add(new Pair<>(address, data));
                     this.streamingState.sort(new NodeStateComparator());

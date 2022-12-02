@@ -40,6 +40,14 @@
                 </executions>
                 <configuration>
                     <mainClass>org.server.Main</mainClass>
+                    <arguments>
+                        <!--suppress UnresolvedMavenProperty -->
+                        <argument>${serverID}</argument>
+                        <!--suppress UnresolvedMavenProperty -->
+                        <argument>${nodeAddress}</argument>
+                        <!--suppress UnresolvedMavenProperty -->
+                        <argument>${buildOverlay}</argument>
+                    </arguments>
                 </configuration>
             </plugin>
         </plugins>

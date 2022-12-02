@@ -71,7 +71,8 @@ public class Main {
             // Start flooding
             Socket socket = new Socket(node_1_address, CONTROL_PORT);
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-            dos.writeUTF("0;" + serverID + ";" + Instant.now().toEpochMilli());
+            String payload = "1;" + serverID + ";0;" + Instant.now().toEpochMilli() + ";0;,";
+            dos.writeUTF(payload);
             dos.flush();
             dos.close();
             socket.close();

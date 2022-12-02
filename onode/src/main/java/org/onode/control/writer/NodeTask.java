@@ -45,22 +45,6 @@ public class NodeTask implements Runnable
         this.dataQueue = dataQueue;
     }
 
-    private void startFlood(NodePacketFlood floodPacket)
-    {
-        // Create flood packet payload
-        String payload = NodePacketFlood.createFloodPacket(floodPacket.getServerID(), floodPacket.getTimestamp());
-
-        try
-        {
-            // Create task to send to all adjacents
-            this.dataQueue.put(new Triplet<>(NodeController.OP_WRITE, this.adjacents, payload));
-        }
-        catch (InterruptedException e)
-        {
-            System.err.println("[" + LocalDateTime.now() + "]: Error updating queue.");
-        }
-    }
-
     private void flood(NodePacketFlood floodPacket)
     {
         try
@@ -77,14 +61,17 @@ public class NodeTask implements Runnable
 
             // Create update state request
             // jumps, timestamp, elapsedTime, route
-            this.dataQueue.put(
-                    new Triplet<>(
-                            NodeController.OP_CHANGE_STATE,
-                            Collections.singletonList(this.address),
-                            Arrays.asList(serverID, jumps, timestamp, elapsedTime, routeAddresses)
-                            ));
+            // Do not create this entry if the size of the routeAddresses list is 1.
+            //  This means that the server is our parent "node".
+            if(routeAddresses.size() > 1)
+                this.dataQueue.put(
+                        new Triplet<>(
+                                NodeController.OP_CHANGE_STATE,
+                                Collections.singletonList(this.address),
+                                Arrays.asList(serverID, jumps, timestamp, elapsedTime, routeAddresses)
+                                ));
 
-            // Increment jumps
+            // Increment jumps (even if the server is on the same container as the node, it counts as a jump).
             jumps++;
 
             // Create packet
@@ -158,8 +145,6 @@ public class NodeTask implements Runnable
                 int packetID = Integer.parseInt(this.data.split(ARG_SEP)[0]);
                 if (packetID == INodePacket.FLOOD_PACKET_ID)
                     this.flood(new NodePacketFlood(this.data));
-                else if (packetID == INodePacket.INITIAL_FLOOD_PACKET_ID)
-                    this.startFlood(new NodePacketFlood(this.data));
                 else if (packetID == INodePacket.ACTIVATE_PACKET_ID)
                     this.activate(new NodePacketGeneric(this.data));
                 else if (packetID == INodePacket.DEACTIVATE_PACKET_ID)

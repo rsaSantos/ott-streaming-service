@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Main {
@@ -28,6 +29,81 @@ public class Main {
 
     public static void main(String[] args)
     {
+        String serverID = null;
+        String node_1_address = null;
+        boolean buildOverlay = true;
+        if(args.length > 1)
+        {
+            serverID = args[0];
+            node_1_address = args[1];
+            if(args.length > 2)
+                buildOverlay = Boolean.parseBoolean(args[2]);
+
+            System.out.println("[" + LocalDateTime.now() + "]: Node Address is [" + node_1_address + "]. Build overlay? " + buildOverlay);
+        }
+        else
+        {
+            System.out.println("[" + LocalDateTime.now() + "]: Invalid arguments '" + Arrays.toString(args) + "'.");
+            System.exit(1);
+        }
+
+        ServerSocket ss = null;
+        try
+        {
+            ss = new ServerSocket(BOOTSTRAPPER_PORT);
+        }
+        catch (IOException e)
+        {
+            System.err.println("[" + LocalDateTime.now() + "]: Error creating server socket. Aborting...");
+            System.exit(1);
+        }
+
+        if(buildOverlay)
+            buildOverlay(ss);
+
+        try
+        {
+            // TODO: Wait for nodes...needed? Maybe...
+            System.out.println("[" + LocalDateTime.now() + "]: Waiting 3 seconds...");
+            Thread.sleep(3000);
+            System.out.println("[" + LocalDateTime.now() + "]: Trying to connect with node 1...");
+
+            // Start flooding
+            Socket socket = new Socket(node_1_address, CONTROL_PORT);
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            dos.writeUTF("0;" + serverID + ";" + Instant.now().toEpochMilli());
+            dos.flush();
+            dos.close();
+            socket.close();
+
+            // Start stream
+            String videoPath = "target/classes/movie.Mjpeg";
+            if (Files.exists(Path.of(videoPath)))
+            {
+                Streaming streaming = null;
+                while(true)
+                {
+                    if(streaming == null || !streaming.isStreamOn())
+                    {
+                        streaming = new Streaming(videoPath, node_1_address);
+                        streaming.run();
+                    }
+                }
+            }
+            else
+                System.err.println("[" + LocalDateTime.now() + "]: Video file does not exist.");
+
+            System.out.println("[" + LocalDateTime.now() + "]: Closing server...");
+            ss.close();
+        }
+        catch (IOException | InterruptedException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void buildOverlay(ServerSocket ss)
+    {
         // Read the configuration file.
         System.out.println("[" + LocalDateTime.now() + "]: Reading config file...");
         Overlay overlay = new Overlay("target/classes/test_medium_config.json");
@@ -42,14 +118,13 @@ public class Main {
         // Connect with all the nodes
         try
         {
-            ServerSocket ss = new ServerSocket(BOOTSTRAPPER_PORT);
             while (criticalNodes > 0)
             {
                 Socket nodeConnection = ss.accept();
                 String address = nodeConnection.getInetAddress().getHostAddress();
                 System.out.println("[" + LocalDateTime.now() + "]: Node " + "[\u001B[32m" + address + "\u001B[0m] has connected.");
                 DataOutputStream outputStream = overlay.sendAdjacents(nodeConnection);
-                
+
                 if(outputStream != null)
                 {
                     connectedNodes.add(new Pair<>(nodeConnection, outputStream));
@@ -59,9 +134,9 @@ public class Main {
                 {
                     System.out.println("[" + LocalDateTime.now() + "]: Adjacent list not sent to node " + "[\033[0;31m" + address + "\u001B[0m].");
                 }
-                
+
                 if (overlay.isCritical(address))
-                    criticalNodes--;                
+                    criticalNodes--;
             }
 
             // TODO (EXTRA): CRITICAL VS NON-CRITICAL NODES
@@ -101,50 +176,11 @@ public class Main {
                 node.getFirst().close();
             }
 
-
-            // Start flooding
-            String node_1_address = "10.0.20.10";
-            System.out.println("[" + LocalDateTime.now() + "]: Waiting 5 seconds...");
-            Thread.sleep(5000);
-            System.out.println("[" + LocalDateTime.now() + "]: Trying to connect with node 1...");
-
-            Socket socket = new Socket(node_1_address, CONTROL_PORT);
-            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-            // TODO: Flood packet
-            String payload = "0;" + Instant.now().toEpochMilli();
-            dos.writeUTF(payload);
-            dos.flush();
-            dos.close();
-            socket.close();
-            // --------------------------------
-
-            // Start streaming
-            String videoPath = "target/classes/movie.Mjpeg";
-            if (Files.exists(Path.of(videoPath)))
-            {
-                Streaming streaming = null;
-                while(true)
-                {
-                    if(streaming == null || !streaming.isStreamOn())
-                    {
-                        streaming = new Streaming(videoPath, node_1_address);
-                        streaming.run();
-                    }
-                }
-            }
-            else
-                System.err.println("[" + LocalDateTime.now() + "]: Connections closed.");
-
-
             connectedNodes.clear();
-            System.out.println("[" + LocalDateTime.now() + "]: Connections closed.");
-
-            System.out.println("[" + LocalDateTime.now() + "]: Closing server...");
-            ss.close();
         }
-        catch (IOException | InterruptedException e)
+        catch (IOException ex)
         {
-            throw new RuntimeException(e);
+            ex.printStackTrace();
         }
     }
 

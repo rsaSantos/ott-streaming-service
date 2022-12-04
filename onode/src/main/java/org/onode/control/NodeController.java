@@ -3,6 +3,7 @@ package org.onode.control;
 
 import org.exceptions.UpdateNodeStateException;
 import org.onode.control.packet.NodePacketGeneric;
+import org.onode.control.packet.NodePacketRefresh;
 import org.onode.control.reader.NodeReceiver;
 import org.onode.control.writer.NodeTask;
 import org.onode.streaming.StreamingController;
@@ -27,6 +28,9 @@ public class NodeController implements Runnable
     public static final int OP_CHANGE_STATE = 2;
     public static final int OP_ACTIVATE_STREAM = 3;
     public static final int OP_DEACTIVATE_STREAM = 4;
+    public static final int OP_REQUEST_REFRESH = 5;
+    public static final int OP_QUESTION_REFRESH = 6;
+    public static final int OP_CHANGE_STATE_WITH_ACTION = 7;
 
     private final List<String> adjacents;
     private final ServerSocket serverSocket;
@@ -170,16 +174,14 @@ public class NodeController implements Runnable
                     // Propagate the stream to best parent node!
                     String bestToReceive = nodeState.getBestToReceive();
                     if (bestToReceive != null) {
-                        // TODO: Get the correct interface address
-                        //  or just use a value to be ignored for now...
-
                         // Create activate packet
                         String data = NodePacketGeneric.createActivatePacket(IGNORE);
 
                         // Send packet
                         this.writeDataTo(data, bestToReceive);
                     }
-                } else if (Objects.equals(operation, OP_DEACTIVATE_STREAM))
+                }
+                else if (Objects.equals(operation, OP_DEACTIVATE_STREAM))
                 {
                     // Remove address from streaming list.
                     boolean isLast = streamingController.remove(addresses.get(0));
@@ -198,7 +200,62 @@ public class NodeController implements Runnable
                         }
                     }
                 }
-            } catch (InterruptedException e) {
+                else if (Objects.equals(operation, OP_REQUEST_REFRESH))
+                {
+                    Set<String> parentsAddresses = nodeState.getParentAddresses();
+                    int nParents = parentsAddresses.size();
+
+                    // Send request refresh packet to parent...
+                    String payload = null;
+                    if(nParents == 1)
+                    {
+                        payload = NodePacketRefresh.createRequestRefreshPacket();
+                    }
+                    else if(nParents > 1)
+                    {
+                        payload = NodePacketRefresh.createQRequestPacket();
+                    }
+
+                    if(payload != null)
+                        for(String address : parentsAddresses)
+                            this.writeDataTo(payload, address);
+                }
+                else if (Objects.equals(operation, OP_QUESTION_REFRESH))
+                {
+                    double tts = streamingController.getAverageTTS();
+                    List<String> route = nodeState.getBestRoute();
+                    String serverID = nodeState.getBestToReceiveServerID();
+
+                    if(route != null)
+                    {
+                        String answerRefreshPayload = NodePacketRefresh.createARequestPacket(serverID, tts, route);
+                        this.writeDataTo(answerRefreshPayload, addresses.get(0));
+                    }
+                    else
+                        System.err.println("[" + LocalDateTime.now() + "] Error getting the best route.");
+                }
+                else if(Objects.equals(operation, OP_CHANGE_STATE_WITH_ACTION))
+                {
+                    String lastBestNodeToReceive = nodeState.getBestToReceive();
+                    try {
+                        nodeState.update(new Pair<>(addresses.get(0), dataTriplet.third()));
+                    } catch (UpdateNodeStateException e) {
+                        System.err.println(e.getMessage());
+                    }
+                    String currentBestNodeToReceive = nodeState.getBestToReceive();
+                    if(!lastBestNodeToReceive.equals(currentBestNodeToReceive))
+                    {
+                        // Deactivate old best
+                        String deactivatePayload = NodePacketGeneric.createDeactivatePacket(IGNORE);
+                        this.writeDataTo(deactivatePayload, lastBestNodeToReceive);
+
+                        // Activate best stream
+                        String activatePayload = NodePacketGeneric.createActivatePacket(IGNORE);
+                        this.writeDataTo(activatePayload, currentBestNodeToReceive);
+                    }
+                }
+            }
+            catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }

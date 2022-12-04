@@ -1,5 +1,6 @@
 package org.onode.control.writer;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +12,7 @@ import org.onode.control.NodeController;
 import org.onode.control.packet.INodePacket;
 import org.onode.control.packet.NodePacketFlood;
 import org.onode.control.packet.NodePacketGeneric;
+import org.onode.control.packet.NodePacketRefresh;
 import org.onode.utils.*;
 
 import static org.onode.control.NodeController.IGNORE;
@@ -52,8 +54,8 @@ public class NodeTask implements Runnable
             // Get data
             String serverID = floodPacket.getServerID();
             int jumps = floodPacket.getJumps();
-            long timestamp = floodPacket.getTimestamp();
-            long elapsedTime = floodPacket.getElapsedTime();
+            long serverTimestamp = floodPacket.getServerTimestamp();
+            long elapsedTime = Instant.now().toEpochMilli() - serverTimestamp;
             List<String> routeAddresses = floodPacket.getAddressRoute();
 
             // Add previous node address
@@ -68,14 +70,14 @@ public class NodeTask implements Runnable
                         new Triplet<>(
                                 NodeController.OP_CHANGE_STATE,
                                 Collections.singletonList(this.address),
-                                Arrays.asList(serverID, jumps, timestamp, elapsedTime, routeAddresses)
+                                Arrays.asList(serverID, jumps, elapsedTime, routeAddresses)
                                 ));
 
             // Increment jumps (even if the server is on the same container as the node, it counts as a jump).
             jumps++;
 
             // Create packet
-            String payload = NodePacketFlood.createFloodPacket(serverID, timestamp, elapsedTime, jumps, routeAddresses);
+            String payload = NodePacketFlood.createFloodPacket(serverID, serverTimestamp, elapsedTime, jumps, routeAddresses);
 
             // Get list of nodes to send inside payload
             List<String> nodesToSend = new ArrayList<>(this.adjacents);
@@ -135,6 +137,69 @@ public class NodeTask implements Runnable
         }
     }
 
+    private void requestRefresh()
+    {
+        // Create task to handle the refresh request.
+        try {
+            this.dataQueue.put(
+                    new Triplet<>(
+                            NodeController.OP_REQUEST_REFRESH,
+                            null,
+                            null
+                    )
+            );
+        }
+        catch (InterruptedException e)
+        {
+            System.err.println("[" + LocalDateTime.now() + "]: Failed to put request refresh in data queue.");
+        }
+    }
+
+    private void q_refresh()
+    {
+        // Create task to handle the question refresh.
+        try {
+            this.dataQueue.put(
+                    new Triplet<>(
+                            NodeController.OP_QUESTION_REFRESH,
+                            Collections.singletonList(this.address),
+                            null
+                    )
+            );
+        }
+        catch (InterruptedException e)
+        {
+            System.err.println("[" + LocalDateTime.now() + "]: Failed to put request refresh in data queue.");
+        }
+    }
+
+    private void a_refresh(NodePacketRefresh nodePacketRefresh)
+    {
+        String serverID = nodePacketRefresh.getServerID();
+        double nodeAverageTTS = nodePacketRefresh.getAverageTTS();
+        long timestamp = nodePacketRefresh.getTimestamp();
+        List<String> route = nodePacketRefresh.getRoute();
+
+        double averageTimeToServer = Instant.now().toEpochMilli() - timestamp + nodeAverageTTS;
+        route.add(this.address);
+        int jumps = route.size();
+
+        // Update state
+        try
+        {
+            this.dataQueue.put(
+                    new Triplet<>(
+                            NodeController.OP_CHANGE_STATE_WITH_ACTION,
+                            Collections.singletonList(this.address),
+                            Arrays.asList(serverID, jumps, averageTimeToServer, route)
+                    ));
+        }
+        catch (InterruptedException e)
+        {
+            System.err.println("[" + LocalDateTime.now() + "]: Error updating queue.");
+        }
+    }
+
     @Override
     public void run() 
     {
@@ -149,6 +214,12 @@ public class NodeTask implements Runnable
                     this.activate(new NodePacketGeneric(this.data));
                 else if (packetID == INodePacket.DEACTIVATE_PACKET_ID)
                     this.deactivate(new NodePacketGeneric(this.data));
+                else if (packetID == INodePacket.REQUEST_REFRESH_PACKET_ID)
+                    this.requestRefresh();
+                else if(packetID == INodePacket.Q_REFRESH_PACKET_ID)
+                    this.q_refresh();
+                else if(packetID == INodePacket.A_REFRESH_PACKET_ID)
+                    this.a_refresh(new NodePacketRefresh(this.data));
 
                 // TODO: More packets... (maybe use switch)
             }

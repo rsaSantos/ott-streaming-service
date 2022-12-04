@@ -11,8 +11,7 @@ public class NodePacketFlood implements INodePacket
 {
     private final String serverID;
     private final int jumps;
-    private final long timestamp;
-    private final long elapsedTime;
+    private final long serverTimestamp;
     private final List<String> addressRoute;
     // ----------------------------
 
@@ -28,13 +27,12 @@ public class NodePacketFlood implements INodePacket
         // Flood packet
         // ----------------------------
         int ID = Integer.parseInt(splited[0]);
-        if(ID == NodePacketFlood.FLOOD_PACKET_ID && splited.length == 6)
+        if(ID == NodePacketFlood.FLOOD_PACKET_ID && splited.length == 5)
         {
             this.serverID = splited[1];
             this.jumps = Integer.parseInt(splited[2]);
-            this.timestamp = Long.parseLong(splited[3]);
-            this.elapsedTime = Long.parseLong(splited[4]);
-            String[] ips = splited[5].split(LST_SEP);
+            this.serverTimestamp = Long.parseLong(splited[3]);
+            String[] ips = splited[4].split(LST_SEP);
             this.addressRoute = new ArrayList<>();
             this.addressRoute.addAll(Arrays.asList(ips));
         }
@@ -50,8 +48,8 @@ public class NodePacketFlood implements INodePacket
         return jumps;
     }
 
-    public long getTimestamp() {
-        return timestamp;
+    public long getServerTimestamp() {
+        return serverTimestamp;
     }
 
     public List<String> getAddressRoute()
@@ -59,24 +57,17 @@ public class NodePacketFlood implements INodePacket
         return addressRoute;
     }
 
-    public long getElapsedTime() {
-        return elapsedTime;
-    }
 
     public static String createFloodPacket(
             String serverID,
             long receivedTimestamp,
-            long elapsedTime,
+            long newElapsedTime,
             int jumps,
             List<String> routeAddresses)
     {
-        long timestamp = Instant.now().toEpochMilli();
-        long newElapsedTime = elapsedTime + (timestamp - receivedTimestamp);
-
         return FLOOD_PACKET_ID + ARG_SEP
                 + serverID + ARG_SEP +
                 + jumps + ARG_SEP
-                + timestamp + ARG_SEP
                 + newElapsedTime + ARG_SEP
                 + String.join(LST_SEP, routeAddresses);
     }

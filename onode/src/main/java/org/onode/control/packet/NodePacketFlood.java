@@ -74,7 +74,7 @@ public class NodePacketFlood implements INodePacket
         long newElapsedTime = elapsedTime + (timestamp - receivedTimestamp);
 
         return FLOOD_PACKET_ID + ARG_SEP
-                + serverID + ARG_SEP
+                + serverID + ARG_SEP +
                 + jumps + ARG_SEP
                 + timestamp + ARG_SEP
                 + newElapsedTime + ARG_SEP

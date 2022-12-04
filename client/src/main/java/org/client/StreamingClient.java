@@ -189,16 +189,16 @@ public class StreamingClient implements Runnable
                 //receive the DP from the socket:
                 RTPsocket.receive(rcvdp);
 
-                //create an RTPpacket object from the DP
-                RTPpacket rtp_packet = new RTPpacket(rcvdp.getData(), rcvdp.getLength());
+                //create an RTPpacketClient object from the DP
+                RTPpacketClient rtp_packet = new RTPpacketClient(rcvdp.getData(), rcvdp.getLength());
 
                 //print important header fields of the RTP packet received:
-                System.out.println("Got RTP packet with SeqNum # "+rtp_packet.getsequencenumber()+" TimeStamp "+rtp_packet.gettimestamp()+" ms, of type "+rtp_packet.getpayloadtype());
+                System.out.println("Got RTP packet with SeqNum # "+rtp_packet.getsequencenumber()+" Elapsed time "+rtp_packet.getelapsedTime()+" ms, of type "+rtp_packet.getpayloadtype());
 
                 //print header bitstream:
                 rtp_packet.printheader();
 
-                //get the payload bitstream from the RTPpacket object
+                //get the payload bitstream from the RTPpacketClient object
                 int payload_length = rtp_packet.getpayload_length();
                 byte [] payload = new byte[payload_length];
                 rtp_packet.getpayload(payload);

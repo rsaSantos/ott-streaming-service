@@ -104,8 +104,8 @@ public class Streaming extends JFrame implements ActionListener, Runnable
                 //get next frame to send from the video, as well as its size
                 int image_length = video.getnextframe(sBuf);
 
-                //Builds an RTPpacket object containing the frame
-                RTPpacket rtp_packet = new RTPpacket(MJPEG_TYPE, imagenb, imagenb*FRAME_PERIOD, sBuf, image_length);
+                //Builds an RTPpacketServer object containing the frame
+                RTPpacketServer rtp_packet = new RTPpacketServer(MJPEG_TYPE, imagenb, sBuf, image_length);
 
                 //get to total length of the full rtp packet to send
                 int packet_length = rtp_packet.getlength();

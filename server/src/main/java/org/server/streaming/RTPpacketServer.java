@@ -1,20 +1,18 @@
 package org.server.streaming;
 
-public class RTPpacket{
+import java.time.Instant;
+
+public class RTPpacketServer {
 
     //size of the RTP header:
     static int HEADER_SIZE = 12;
 
     //Fields that compose the RTP header
     public int Version;
-    public int Padding;
-    public int Extension;
     public int CC;
-    public int Marker;
     public int PayloadType;
     public int SequenceNumber;
-    public int TimeStamp;
-    public int Ssrc;
+    public long TimeStamp;
 
     //Bitstream of the RTP header
     public byte[] header;
@@ -26,42 +24,37 @@ public class RTPpacket{
 
 
     //--------------------------
-    //Constructor of an RTPpacket object from header fields and payload bitstream
+    //Constructor of an RTPpacketServer object from header fields and payload bitstream
     //--------------------------
-    public RTPpacket(int PType, int Framenb, int Time, byte[] data, int data_length){
+    public RTPpacketServer(int PType, int Framenb, byte[] data, int data_length){
         //fill by default header fields:
         Version = 2;
-        Padding = 0;
-        Extension = 0;
         CC = 0;
-        Marker = 0;
-        Ssrc = 0;
 
         //fill changing header fields:
         SequenceNumber = Framenb;
-        TimeStamp = Time;
+        TimeStamp = Instant.now().toEpochMilli();
         PayloadType = PType;
 
         //build the header bistream:
         //--------------------------
         header = new byte[HEADER_SIZE];
 
-        //.............
-        //TO COMPLETE
-        //.............
         //fill the header array of byte with RTP header fields
         header[0] = (byte)(Version << 6 | CC);
         header[1] = (byte)(PayloadType & 0x000000FF);
         header[2] = (byte)(SequenceNumber >> 8);
         header[3] = (byte)(SequenceNumber & 0xFF);
-        header[4] = (byte)(TimeStamp >> 24);
-        header[5] = (byte)(TimeStamp >> 16);
-        header[6] = (byte)(TimeStamp >> 8);
-        header[7] = (byte)(TimeStamp & 0xFF);
-        header[8] = (byte)(0);
-        header[9] = (byte)(0);
-        header[10] = (byte)(0);
-        header[11] = (byte)(0);
+
+        // server timestamp
+        header[4] = (byte)(TimeStamp >> 56);
+        header[5] = (byte)(TimeStamp >> 48);
+        header[6] = (byte)(TimeStamp >> 40);
+        header[7] = (byte)(TimeStamp >> 32);
+        header[8] = (byte)(TimeStamp >> 24);
+        header[9] = (byte)(TimeStamp >> 16);
+        header[10] = (byte)(TimeStamp >> 8);
+        header[11] = (byte)(TimeStamp & 0xFF);
 
         //fill the payload bitstream:
         //--------------------------
@@ -100,10 +93,7 @@ public class RTPpacket{
     {
         System.out.print("[RTP-Header] ");
         System.out.println("Version: " + Version
-                + ", Padding: " + Padding
-                + ", Extension: " + Extension
                 + ", CC: " + CC
-                + ", Marker: " + Marker
                 + ", PayloadType: " + PayloadType
                 + ", SequenceNumber: " + SequenceNumber
                 + ", TimeStamp: " + TimeStamp);

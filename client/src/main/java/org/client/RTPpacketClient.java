@@ -1,21 +1,21 @@
 package org.client;
 
 
-public class RTPpacket{
+import java.nio.ByteBuffer;
+import java.time.Instant;
+
+public class RTPpacketClient {
 
     //size of the RTP header:
     static int HEADER_SIZE = 12;
 
     //Fields that compose the RTP header
     public int Version;
-    public int Padding;
-    public int Extension;
     public int CC;
-    public int Marker;
     public int PayloadType;
     public int SequenceNumber;
-    public int TimeStamp;
-    public int Ssrc;
+    public long serverTimestamp;
+    public long elapsedTime;
 
     //Bitstream of the RTP header
     public byte[] header;
@@ -26,17 +26,13 @@ public class RTPpacket{
     public byte[] payload;
 
     //--------------------------
-    //Constructor of an RTPpacket object from the packet bistream
+    //Constructor of an RTPpacketClient object from the packet bistream
     //--------------------------
-    public RTPpacket(byte[] packet, int packet_size)
+        public RTPpacketClient(byte[] packet, int packet_size)
     {
         //fill default fields:
         Version = 2;
-        Padding = 0;
-        Extension = 0;
         CC = 0;
-        Marker = 0;
-        Ssrc = 0;
 
         //check if total packet size is lower than the header size
         if (packet_size >= HEADER_SIZE)
@@ -54,12 +50,14 @@ public class RTPpacket{
             //interpret the changing fields of the header:
             PayloadType = header[1] & 127;
             SequenceNumber = unsigned_int(header[3]) + 256*unsigned_int(header[2]);
-            TimeStamp = unsigned_int(header[7]) + 256*unsigned_int(header[6]) + 65536*unsigned_int(header[5]) + 16777216*unsigned_int(header[4]);
+
+            serverTimestamp = ByteBuffer.wrap(header, 4, 8).getLong();
+            elapsedTime = Instant.now().getEpochSecond() - serverTimestamp;
         }
     }
 
     //--------------------------
-    //getpayload: return the payload bistream of the RTPpacket via pointer
+    //getpayload: return the payload bistream of the RTPpacketClient via pointer
     //--------------------------
     public void getpayload(byte[] data) {
 
@@ -78,8 +76,8 @@ public class RTPpacket{
     //gettimestamp
     //--------------------------
 
-    public int gettimestamp() {
-        return(TimeStamp);
+    public long getelapsedTime() {
+        return(elapsedTime);
     }
 
     //--------------------------
@@ -104,13 +102,10 @@ public class RTPpacket{
     {
         System.out.print("[RTP-Header] ");
         System.out.println("Version: " + Version
-                + ", Padding: " + Padding
-                + ", Extension: " + Extension
                 + ", CC: " + CC
-                + ", Marker: " + Marker
                 + ", PayloadType: " + PayloadType
                 + ", SequenceNumber: " + SequenceNumber
-                + ", TimeStamp: " + TimeStamp);
+                + ", ServerTimeStamp: " + serverTimestamp);
     }
 
     //return the unsigned value of 8-bit integer nb

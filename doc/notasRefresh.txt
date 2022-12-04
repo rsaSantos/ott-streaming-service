@@ -1,0 +1,21 @@
+Required:
+	- [DONE] Each node knows latest average time to server.
+		- Calculated by stream packet info in stream controller
+
+	- ...
+
+Process [TODO]:
+	1. Client sends "Request Refresh" packet. Packet only with ID.
+	2. Node receives "Request Refresh" packet.
+		2.1 Nodes checks number of parents.
+			2.1.1 Only one parent -> send "Request Refresh" to parent.
+			2.1.2 More than one parent -> send "QRefresh" packet. Packet only with ID.
+	3. Node receives "QRefresh" packet.
+		3.1 Sends "ARefresh" to node that sent the "QRefresh" packet.
+			- payload = current average time to server, timestamp, number of jumps from server
+	4. Node receives "ARefresh" packet
+		4.1 Calculates time to server: (receivedTimestamp - now) + receivedTimeToServer
+		4.2 Increases number of jumps to server (++)
+		4.3 Updates state
+			4.3.1 Best parent node changed? Deactivate old stream, activate new stream.
+

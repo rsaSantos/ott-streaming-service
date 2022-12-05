@@ -22,6 +22,7 @@ public class NodeController implements Runnable
 {
     public static final String DELETE_ME = "8D3rL2=E?2T.-E!"; // Some random string
     public static final String IGNORE = "IgNoReMe"; // Some random string
+    public static final double CHANGE_COEFFICIENT = 1.25;
     public static final int OP_READ = 0;
     public static final int OP_WRITE = 1;
     public static final int OP_CHANGE_STATE = 2;
@@ -156,10 +157,32 @@ public class NodeController implements Runnable
                 // From worker threads
                 else if (Objects.equals(operation, OP_CHANGE_STATE))
                 {
-                    try {
+                    String lastBestNodeToReceive = nodeState.getBestToReceive();
+                    long lastBestTime = nodeState.getBestTime();
+                    try
+                    {
                         nodeState.update(new Pair<>(addresses.get(0), dataTriplet.third()));
-                    } catch (UpdateNodeStateException e) {
+                    }
+                    catch (UpdateNodeStateException e) {
                         System.err.println(e.getMessage());
+                    }
+                    String currentBestNodeToReceive = nodeState.getBestToReceive();
+                    long currentBestTime = nodeState.getBestTime();
+
+                    if(currentBestNodeToReceive == null)
+                        System.err.println("[" + LocalDateTime.now() + "]: Error updating node state.");
+                    else if(
+                            !currentBestNodeToReceive.equals(lastBestNodeToReceive) &&
+                                    currentBestTime * CHANGE_COEFFICIENT <= lastBestTime
+                    )
+                    {
+                        // Deactivate old best
+                        String deactivatePayload = NodePacketGeneric.createDeactivatePacket(IGNORE);
+                        this.writeDataTo(deactivatePayload, lastBestNodeToReceive);
+
+                        // Activate best stream
+                        String activatePayload = NodePacketGeneric.createActivatePacket(IGNORE);
+                        this.writeDataTo(activatePayload, currentBestNodeToReceive);
                     }
                 }
                 else if (Objects.equals(operation, OP_ACTIVATE_STREAM))
@@ -170,9 +193,6 @@ public class NodeController implements Runnable
                     // Propagate the stream to best parent node!
                     String bestToReceive = nodeState.getBestToReceive();
                     if (bestToReceive != null) {
-                        // TODO: Get the correct interface address
-                        //  or just use a value to be ignored for now...
-
                         // Create activate packet
                         String data = NodePacketGeneric.createActivatePacket(IGNORE);
 

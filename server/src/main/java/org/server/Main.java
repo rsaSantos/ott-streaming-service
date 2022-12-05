@@ -69,13 +69,7 @@ public class Main {
             System.out.println("[" + LocalDateTime.now() + "]: Trying to connect with node 1...");
 
             // Start flooding
-            Socket socket = new Socket(node_1_address, CONTROL_PORT);
-            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-            String payload = "1;" + serverID + ";0;" + Instant.now().toEpochMilli() + ";0;,";
-            dos.writeUTF(payload);
-            dos.flush();
-            dos.close();
-            socket.close();
+            start_flood(node_1_address, serverID);
 
             // Start stream
             String videoPath = "target/classes/movie.Mjpeg";
@@ -88,6 +82,7 @@ public class Main {
                     {
                         streaming = new Streaming(videoPath, node_1_address);
                         streaming.run();
+                        start_flood(node_1_address, serverID);
                     }
                 }
             }
@@ -101,6 +96,18 @@ public class Main {
         {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void start_flood(String node_1_address, String serverID) throws IOException
+    {
+        System.out.println("[" + LocalDateTime.now() + "]: Start flooding...");
+        Socket socket = new Socket(node_1_address, CONTROL_PORT);
+        DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+        String payload = "1;" + serverID + ";0;" + Instant.now().toEpochMilli() + ";0;,";
+        dos.writeUTF(payload);
+        dos.flush();
+        dos.close();
+        socket.close();
     }
 
     private static void buildOverlay(ServerSocket ss)

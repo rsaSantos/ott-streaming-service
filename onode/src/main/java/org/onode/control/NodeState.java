@@ -29,34 +29,25 @@ public class NodeState
                 Pair<String, List<Object>> floodInfo_2)
         {
             // Get data
-            // (String)serverID, (int)jumps, (long)timestamp, (long)elapsedTime, (List<String>)route
+            // (String)serverID, (int)jumps, (long)elapsedTime, (List<String>)route
             int jumps_1 = (int) floodInfo_1.second().get(1);
-            int jumps_2 = (int) floodInfo_2.second().get(2);
+            int jumps_2 = (int) floodInfo_2.second().get(1);
 
-            long timestamp_1 = (long) floodInfo_1.second().get(2);
-            long timestamp_2 = (long) floodInfo_2.second().get(2);
-
-            long elapsedTime_1 = (long) floodInfo_1.second().get(3);
-            long elapsedTime_2 = (long) floodInfo_2.second().get(3);
-
-            int timestampCompare = Long.compare(timestamp_1, timestamp_2);
-            boolean timestampRelation = equalsWithError(timestampCompare, timestamp_1, timestamp_2);
+            long elapsedTime_1 = (long) floodInfo_1.second().get(2);
+            long elapsedTime_2 = (long) floodInfo_2.second().get(2);
 
             int elapsedTimeCompare = Long.compare(elapsedTime_1, elapsedTime_2);
             boolean elapsedTimeRelation = equalsWithError(elapsedTimeCompare, elapsedTime_1, elapsedTime_2);
 
             // Means we assume that timestamps are equal!
             if(elapsedTimeRelation)
-                if(timestampRelation)
-                    return Integer.compare(jumps_1, jumps_2);
-                else
-                    return timestampCompare;
+                return Integer.compare(jumps_1, jumps_2);
             else
                 return elapsedTimeCompare;
         }
     }
 
-    // [pair (address "pai", [jumps, timestamp, elapsedTime, route])]
+    // [pair (address "pai", [(String)serverID, (int)jumps, (long)elapsedTime, (List<String>)route])]
     // Sorted by fastest!
     private final List<Pair<String, List<Object>>> streamingState;
     
@@ -72,9 +63,9 @@ public class NodeState
         if(floodInfo.second() instanceof List<?>)
         {
             List<Object> data = (List<Object>) floodInfo.second();
-            if(data.size() == 5)
+            if(data.size() == 4)
             {
-                if(data.get(4) instanceof List<?>)
+                if(data.get(3) instanceof List<?>)
                 {
                     this.streamingState.add(new Pair<>(address, data));
                     this.streamingState.sort(new NodeStateComparator());
@@ -92,5 +83,10 @@ public class NodeState
     public String getBestToReceive()
     {
         return this.streamingState.isEmpty() ? null : this.streamingState.get(0).first();
+    }
+
+    public long getBestTime()
+    {
+        return this.streamingState.isEmpty() ? -1 : (long) this.streamingState.get(0).second().get(2);
     }
 }

@@ -1,5 +1,6 @@
 package org.onode.control.writer;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,11 +20,6 @@ import static org.onode.control.packet.INodePacket.ARG_SEP;
 public class NodeTask implements Runnable
 {
     public static int TASK_PACKET = 0;
-
-    // TODO:
-    //  Activate - 2; 3 - Streamer
-    //  Refresh - 4
-
     private final int taskType;
     private final String address;
     private final String data;
@@ -52,12 +48,14 @@ public class NodeTask implements Runnable
             // Get data
             String serverID = floodPacket.getServerID();
             int jumps = floodPacket.getJumps();
-            long timestamp = floodPacket.getTimestamp();
-            long elapsedTime = floodPacket.getElapsedTime();
+            long serverTimestamp = floodPacket.getServerTimestamp();
             List<String> routeAddresses = floodPacket.getAddressRoute();
 
             // Add previous node address
             routeAddresses.add(this.address);
+
+            // Calculate time to server
+            long elapsedTime = Instant.now().toEpochMilli() - serverTimestamp;
 
             // Create update state request
             // jumps, timestamp, elapsedTime, route
@@ -68,14 +66,14 @@ public class NodeTask implements Runnable
                         new Triplet<>(
                                 NodeController.OP_CHANGE_STATE,
                                 Collections.singletonList(this.address),
-                                Arrays.asList(serverID, jumps, timestamp, elapsedTime, routeAddresses)
+                                Arrays.asList(serverID, jumps, elapsedTime, routeAddresses)
                                 ));
 
             // Increment jumps (even if the server is on the same container as the node, it counts as a jump).
             jumps++;
 
             // Create packet
-            String payload = NodePacketFlood.createFloodPacket(serverID, timestamp, elapsedTime, jumps, routeAddresses);
+            String payload = NodePacketFlood.createFloodPacket(serverID, jumps, serverTimestamp, routeAddresses);
 
             // Get list of nodes to send inside payload
             List<String> nodesToSend = new ArrayList<>(this.adjacents);

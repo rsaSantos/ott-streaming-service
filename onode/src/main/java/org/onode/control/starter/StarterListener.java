@@ -9,7 +9,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class StarterListener implements Runnable, IStarter
 {
@@ -17,7 +16,6 @@ public class StarterListener implements Runnable, IStarter
     private final ServerSocket serverSocket;
     private final int token;
     private final List<String> adjacents;
-
 
 
     public StarterListener(ServerSocket serverSocket, List<String> adjacents, int token)

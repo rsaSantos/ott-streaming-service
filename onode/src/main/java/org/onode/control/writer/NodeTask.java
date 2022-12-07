@@ -2,10 +2,7 @@ package org.onode.control.writer;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 import org.exceptions.PacketFormatException;
 import org.onode.control.NodeController;
@@ -24,21 +21,26 @@ public class NodeTask implements Runnable
     private final String address;
     private final String data;
     private final LinkedBlockingQueue<Triplet<Integer, List<String>, Object>> dataQueue;
-    private final List<String> adjacents;
+    private final List<Pair<String, String>> adjacent_ID_IP;
+    private final String myID;
 
     public NodeTask(
             int task_type,
             String address,
             String data,
-            List<String> adjacents,
+            String myID,
+            List<Pair<String, String>> adjacent_ID_IP,
             LinkedBlockingQueue<Triplet<Integer, List<String>, Object>> dataQueue
     )
     {
+        this.myID = myID;
         this.taskType = task_type;
         this.address = address;
         this.data = data;
-        this.adjacents = adjacents;
         this.dataQueue = dataQueue;
+        this.adjacent_ID_IP = new ArrayList<>();
+        for(Pair<String, String> idIP : adjacent_ID_IP)
+            this.adjacent_ID_IP.add(new Pair<>(idIP.first(), idIP.second()));
     }
 
     private void flood(NodePacketFlood floodPacket)
@@ -49,10 +51,10 @@ public class NodeTask implements Runnable
             String serverID = floodPacket.getServerID();
             int jumps = floodPacket.getJumps();
             long serverTimestamp = floodPacket.getServerTimestamp();
-            List<String> routeAddresses = floodPacket.getAddressRoute();
+            List<String> nodeIDRoute = floodPacket.getNodeIDRoute();
 
-            // Add previous node address
-            routeAddresses.add(this.address);
+            // Add our node ID.
+            nodeIDRoute.add(myID);
 
             // Calculate time to server
             long elapsedTime = Instant.now().toEpochMilli() - serverTimestamp;
@@ -61,23 +63,27 @@ public class NodeTask implements Runnable
             // jumps, timestamp, elapsedTime, route
             // Do not create this entry if the size of the routeAddresses list is 1.
             //  This means that the server is our parent "node".
-            if(routeAddresses.size() > 1)
+            if(nodeIDRoute.size() > 1)
                 this.dataQueue.put(
                         new Triplet<>(
                                 NodeController.OP_CHANGE_STATE,
                                 Collections.singletonList(this.address),
-                                Arrays.asList(serverID, jumps, elapsedTime, routeAddresses)
+                                Arrays.asList(serverID, jumps, elapsedTime, nodeIDRoute)
                                 ));
 
             // Increment jumps (even if the server is on the same container as the node, it counts as a jump).
             jumps++;
 
             // Create packet
-            String payload = NodePacketFlood.createFloodPacket(serverID, jumps, serverTimestamp, routeAddresses);
+            String payload = NodePacketFlood.createFloodPacket(serverID, jumps, serverTimestamp, nodeIDRoute);
 
             // Get list of nodes to send inside payload
-            List<String> nodesToSend = new ArrayList<>(this.adjacents);
-            nodesToSend.removeAll(routeAddresses);
+            List<String> nodesToSend = new ArrayList<>();
+            for(Pair<String, String> idIP : adjacent_ID_IP)
+            {
+                if(!nodeIDRoute.contains(idIP.first()))
+                    nodesToSend.add(idIP.second());
+            }
 
             // Create write task (only if there is someone to write to)
             if(!nodesToSend.isEmpty())

@@ -7,7 +7,7 @@ server: su - core -c "export DISPLAY=:0.0 && cd server/ && mvn clean package -Ds
 
 onode: su - core -c "cd onode/ && mvn clean package"
 
-client: 
+client:
 * su - core -c "export DISPLAY=:0.0 && cd client/ && mvn clean package -DmyAddress=localhost -DnodeAddress=localhost"
 
 * su - core -c "export DISPLAY=:0.0 && cd client/ && mvn clean package -DmyAddress=10.0.17.20 -DnodeAddress=10.0.17.1"

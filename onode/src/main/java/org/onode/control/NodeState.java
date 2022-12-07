@@ -67,6 +67,9 @@ public class NodeState
             {
                 if(data.get(3) instanceof List<?>)
                 {
+                    int idxToRemove = this.getPositionOfAddress(address);
+                    if(idxToRemove > 0 && idxToRemove < this.streamingState.size())
+                        this.streamingState.remove(idxToRemove);
                     this.streamingState.add(new Pair<>(address, data));
                     this.streamingState.sort(new NodeStateComparator());
                 }
@@ -80,13 +83,15 @@ public class NodeState
             throw new UpdateNodeStateException("[" + LocalDateTime.now() + "]: Object not of type List<?> (origin at [" + address + "])");
     }
 
+    private int getPositionOfAddress(String addressToFind)
+    {
+        for(int i = 0; i < this.streamingState.size(); ++i)
+            if(this.streamingState.get(i).first().equals(addressToFind)) return i;
+        return -1;
+    }
+
     public String getBestToReceive()
     {
         return this.streamingState.isEmpty() ? null : this.streamingState.get(0).first();
-    }
-
-    public long getBestTime()
-    {
-        return this.streamingState.isEmpty() ? -1 : (long) this.streamingState.get(0).second().get(2);
     }
 }

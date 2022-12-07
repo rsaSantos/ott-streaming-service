@@ -11,7 +11,7 @@ public class NodePacketFlood implements INodePacket
     private final String serverID;
     private final int jumps;
     private final long serverTimestamp;
-    private final List<String> addressRoute;
+    private final List<String> nodeIDRoute;
     // ----------------------------
 
 
@@ -31,8 +31,8 @@ public class NodePacketFlood implements INodePacket
             this.jumps = Integer.parseInt(splited[2]);
             this.serverTimestamp = Long.parseLong(splited[3]);
             String[] ips = splited[4].split(LST_SEP);
-            this.addressRoute = new ArrayList<>();
-            this.addressRoute.addAll(Arrays.asList(ips));
+            this.nodeIDRoute = new ArrayList<>();
+            this.nodeIDRoute.addAll(Arrays.asList(ips));
         }
         else
             throw new PacketFormatException("Wrong Flood Packet format!");
@@ -46,9 +46,9 @@ public class NodePacketFlood implements INodePacket
         return jumps;
     }
 
-    public List<String> getAddressRoute()
+    public List<String> getNodeIDRoute()
     {
-        return addressRoute;
+        return nodeIDRoute;
     }
 
     public long getServerTimestamp() {

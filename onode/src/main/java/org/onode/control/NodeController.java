@@ -22,25 +22,26 @@ public class NodeController implements Runnable
 {
     public static final String DELETE_ME = "8D3rL2=E?2T.-E!"; // Some random string
     public static final String IGNORE = "IgNoReMe"; // Some random string
-    public static final double CHANGE_COEFFICIENT = 1.25;
     public static final int OP_READ = 0;
     public static final int OP_WRITE = 1;
     public static final int OP_CHANGE_STATE = 2;
     public static final int OP_ACTIVATE_STREAM = 3;
     public static final int OP_DEACTIVATE_STREAM = 4;
 
-    private final List<String> adjacents;
+    private final List<Pair<String, String>> adjacent_ID_IP;
+    private final String myID;
     private final ServerSocket serverSocket;
     private final Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> connectionDataMap;
     private final Map<String, Thread> readerThreadsMap;
     private final Map<String, NodeReceiver<?>> nodeReceiverMap;
     private final ExecutorService threadPoolExecutor;
-
     private final LinkedBlockingQueue<Triplet<Integer, List<String>, Object>> dataQueue;
 
 
     public NodeController(
-            List<String> adjacents,
+            String myID,
+            List<String> adjacent_ID,
+            List<String> adjacent_IP,
             ServerSocket serverSocket,
             Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> connectionDataMap,
             int corePoolSize,
@@ -48,16 +49,18 @@ public class NodeController implements Runnable
             int maxQueuedTasks
     )
     {
+        this.myID = myID;
         this.serverSocket = serverSocket;
         this.connectionDataMap = Collections.synchronizedMap(connectionDataMap);
         this.nodeReceiverMap = new HashMap<>();
         this.readerThreadsMap = new HashMap<>();
-        this.adjacents = new ArrayList<>(adjacents);
 
-        // TODO: limit the size of the queue? then threads inserting data will have to wait...
+        this.adjacent_ID_IP = new ArrayList<>();
+        for(int i = 0; i < adjacent_ID.size(); ++i)
+            this.adjacent_ID_IP.add(new Pair<>(adjacent_ID.get(i), adjacent_IP.get(i)));
+
         this.dataQueue = new LinkedBlockingQueue<>();
 
-        // TODO: Thread pool for writing tasks ? Create pre-defined number of threads?
         this.threadPoolExecutor = new ThreadPoolExecutor(
                 corePoolSize,
                 maxPoolSize,
@@ -141,8 +144,9 @@ public class NodeController implements Runnable
                                 NodeTask.TASK_PACKET,
                                 addresses.get(0),
                                 data,
-                                new ArrayList<>(adjacents),
-                                dataQueue
+                                this.myID,
+                                this.adjacent_ID_IP,
+                                this.dataQueue
                         ));
                     }
                 }
@@ -157,32 +161,37 @@ public class NodeController implements Runnable
                 // From worker threads
                 else if (Objects.equals(operation, OP_CHANGE_STATE))
                 {
-                    String lastBestNodeToReceive = nodeState.getBestToReceive();
-                    long lastBestTime = nodeState.getBestTime();
                     try
                     {
+                        String lastBestNodeToReceive = nodeState.getBestToReceive();
                         nodeState.update(new Pair<>(addresses.get(0), dataTriplet.third()));
+                        String currentBestToReceive = nodeState.getBestToReceive();
+
+                        String streamSenderAddress = streamingController.isStreaming();
+
+                        System.out.println("-------------------");
+                        System.out.println("toUpdate=" + addresses.get(0));
+                        System.out.println("lastBestNodeToReceive=" + lastBestNodeToReceive);
+                        System.out.println("currentBestToReceive=" + currentBestToReceive);
+                        System.out.println("streamSenderAddress=" + streamSenderAddress);
+                        System.out.println("-------------------");
+
+                        if(lastBestNodeToReceive != null &&
+                                streamSenderAddress != null &&
+                                !lastBestNodeToReceive.equals(currentBestToReceive))
+                        {
+                            System.out.println("[" + LocalDateTime.now() + "]: Updating stream from [" +
+                                    streamSenderAddress + "] to [" + currentBestToReceive + "].");
+
+                            String deactivationPayload = NodePacketGeneric.createDeactivatePacket(IGNORE);
+                            this.writeDataTo(deactivationPayload, streamSenderAddress);
+
+                            String activationPayload = NodePacketGeneric.createActivatePacket(IGNORE);
+                            this.writeDataTo(activationPayload, currentBestToReceive);
+                        }
                     }
                     catch (UpdateNodeStateException e) {
                         System.err.println(e.getMessage());
-                    }
-                    String currentBestNodeToReceive = nodeState.getBestToReceive();
-                    long currentBestTime = nodeState.getBestTime();
-
-                    if(currentBestNodeToReceive == null)
-                        System.err.println("[" + LocalDateTime.now() + "]: Error updating node state.");
-                    else if(
-                            !currentBestNodeToReceive.equals(lastBestNodeToReceive) &&
-                                    currentBestTime * CHANGE_COEFFICIENT <= lastBestTime
-                    )
-                    {
-                        // Deactivate old best
-                        String deactivatePayload = NodePacketGeneric.createDeactivatePacket(IGNORE);
-                        this.writeDataTo(deactivatePayload, lastBestNodeToReceive);
-
-                        // Activate best stream
-                        String activatePayload = NodePacketGeneric.createActivatePacket(IGNORE);
-                        this.writeDataTo(activatePayload, currentBestNodeToReceive);
                     }
                 }
                 else if (Objects.equals(operation, OP_ACTIVATE_STREAM))
@@ -199,7 +208,8 @@ public class NodeController implements Runnable
                         // Send packet
                         this.writeDataTo(data, bestToReceive);
                     }
-                } else if (Objects.equals(operation, OP_DEACTIVATE_STREAM))
+                }
+                else if (Objects.equals(operation, OP_DEACTIVATE_STREAM))
                 {
                     // Remove address from streaming list.
                     boolean isLast = streamingController.remove(addresses.get(0));
@@ -218,7 +228,8 @@ public class NodeController implements Runnable
                         }
                     }
                 }
-            } catch (InterruptedException e) {
+            }
+            catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }

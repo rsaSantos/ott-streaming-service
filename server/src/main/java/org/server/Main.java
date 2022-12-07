@@ -103,7 +103,7 @@ public class Main {
         System.out.println("[" + LocalDateTime.now() + "]: Start flooding...");
         Socket socket = new Socket(node_1_address, CONTROL_PORT);
         DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-        String payload = "1;" + serverID + ";0;" + Instant.now().toEpochMilli() + ";0;,";
+        String payload = "1;" + serverID + ";0;" + Instant.now().toEpochMilli() + ";,";
         dos.writeUTF(payload);
         dos.flush();
         dos.close();

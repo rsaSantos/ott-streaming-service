@@ -3,10 +3,12 @@ package org.onode;
 import org.onode.control.NodeController;
 import org.onode.control.starter.StarterListener;
 import org.onode.control.starter.StarterSender;
+import org.onode.utils.Pair;
 import org.onode.utils.Triplet;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
@@ -43,7 +45,10 @@ public class Main
             DataInputStream dis = new DataInputStream(socket.getInputStream());
             System.out.println("[" + LocalDateTime.now() + "]: DataInputStream to server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m] up and running.");
 
-            List<String> adjacents = getAdjacents(dis);
+            Triplet<String, List<String>, List<String>> adjacentInfo = getAdjacents(dis);
+            String myID = adjacentInfo.first();
+            List<String> adjacentIDs = adjacentInfo.second();
+            List<String> adjacentIPs = adjacentInfo.third();
 
             int token = new Random().nextInt();
             System.out.println("[" + LocalDateTime.now() + "]: Generated token [\u001B[32m" + token + "\u001B[0m].");
@@ -52,7 +57,7 @@ public class Main
             String permission = dis.readUTF();
             while(!permission.equals(ALL_LIST))
                 permission = dis.readUTF();
-            StarterListener starterListener = new StarterListener(serverSocket, new ArrayList<>(adjacents), token);
+            StarterListener starterListener = new StarterListener(serverSocket, new ArrayList<>(adjacentIPs), token);
             Thread starterListenerThread = new Thread(starterListener);
             starterListenerThread.start();
 
@@ -71,14 +76,13 @@ public class Main
                 permission = dis.readUTF();
             System.out.println("[" + LocalDateTime.now() + "]: Starting to send requests...");
 
-            StarterSender starterSender = new StarterSender(new ArrayList<>(adjacents), token);
+            StarterSender starterSender = new StarterSender(new ArrayList<>(adjacentIPs), token);
             starterSender.run();
 
             System.out.println("[" + LocalDateTime.now() + "]: Waiting for listener thread...");
             starterListenerThread.join();
             System.out.println("[" + LocalDateTime.now() + "]: Listener thread joined.");
 
-            // TODO: Get final list of streams...
             Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> listenerConnectionDataMap = starterListener.getConnectionDataMap();
             Map<String, Triplet<Socket, DataInputStream, DataOutputStream>> senderConnectionDataMap = starterSender.getConnectionDataMap();
 
@@ -115,17 +119,13 @@ public class Main
             System.out.println("[" + LocalDateTime.now() + "]: Terminating connection with server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m]...");
             socket.close();
             System.out.println("[" + LocalDateTime.now() + "]: Connection with server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m] successfully terminated.");
-
+            
 
             // -------------------------------------------------
             // -------------------------------------------------
-
-
-            // TODO: Streaming? Where to handle? Another thread? NodeController?
-
             // Hyperparameters for thread pool
             System.out.println("[" + LocalDateTime.now() + "]: Setting hyper parameters for thread pool...");
-            int maxPoolSize = Math.max(adjacents.size(), 2);
+            int maxPoolSize = Math.max(adjacentIDs.size(), 2);
             int corePoolSize = 2;
             int maxQueuedTasks = 128;
             System.out.println("--------------------------------");
@@ -136,14 +136,16 @@ public class Main
 
             System.out.println("[" + LocalDateTime.now() + "]: Running node listener on main thread...");
             NodeController nodeController = new NodeController(
-                    new ArrayList<>(adjacents),
+                    myID,
+                    adjacentIDs,
+                    adjacentIPs,
                     serverSocket,
                     connectionDataMap,
                     corePoolSize,
                     maxPoolSize,
                     maxQueuedTasks
             );
-            nodeController.run(); // TODO: Sequential? Depends on the streaming...
+            nodeController.run();
             System.out.println("[" + LocalDateTime.now() + "]: Node listener exited.");
 
             System.out.println("[" + LocalDateTime.now() + "]: Closing the server socket...");
@@ -156,28 +158,81 @@ public class Main
         }
     }
 
-    private static List<String> getAdjacents(DataInputStream dis)
+    private static Triplet<String, List<String>, List<String>> getAdjacents(DataInputStream dis)
     {
-        List<String> adjacents = new ArrayList<>();
+        // Info format: myID;adjacents;origins
+        //  adjacents = id1:it0,id2:it0,id3:it1...
+        //  origins   = ipX,idY;ipZ,idK;...
+        //
+        // Build the following structures:
+        // - list with the adjacent nodes ID
+        // - list with the adjacent nodes best IP
+        // - list of triplets: nodeID, i#, address
+        //
+        // Return pair with list of ids and list of best ips.
+        //
+        String myID = null;
+        List<String> adjacentIDs = new ArrayList<>();
+        List<String> adjacentIPs = new ArrayList<>();
+        List<Triplet<String, String, String>> nodeIntAddressInfo = new ArrayList<>();
         try
         {
             // Reading information
             System.out.println("[" + LocalDateTime.now() + "]: Receiving adjacent list from server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m]...");
-            String ips = dis.readUTF();
+            String info = dis.readUTF();
             System.out.println("[" + LocalDateTime.now() + "]: Adjacent list from server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m] received.");
 
-            // Process adjacent list
             System.out.println("[" + LocalDateTime.now() + "]: Processing adjacent list...");
-            String[] ip_list = ips.split(",");
-            Collections.addAll(adjacents, ip_list);
-            System.out.println("[" + LocalDateTime.now() + "]: Adjacent list processed. Result: " + adjacents);
+
+            // results = myID;origins;adjacents
+            //  nodeID,i#,address;...   ;   O1:it0,O2:it0,O3:it2...
+            String[] fragments = info.split(";");
+
+            myID = fragments[0];
+
+            // Build list of triplets
+            int i;
+            for(i = 1; i < fragments.length - 1; ++i)
+            {
+                String[] nodeIntAddress = fragments[i].split(",");
+                nodeIntAddressInfo.add(new Triplet<>(nodeIntAddress[0], nodeIntAddress[1], nodeIntAddress[2]));
+            }
+
+            // Build list of adjacent id and best ip
+            String[] adjacentsInfo = fragments[i].split(",");
+            for(i = 0; i < adjacentsInfo.length; ++i)
+            {
+                String[] idAndInt = adjacentsInfo[i].split(":");
+                String id = idAndInt[0];
+                String bestInt = idAndInt[1];
+
+                // Get address from node id and interface
+                String address = null;
+                for(Triplet<String, String, String> idIntAdd : nodeIntAddressInfo)
+                {
+                    if(idIntAdd.first().equals(id) && idIntAdd.second().equals(bestInt))
+                    {
+                        address = idIntAdd.third();
+                        break;
+                    }
+                }
+
+                if(address != null)
+                {
+                    adjacentIDs.add(id);
+                    adjacentIPs.add(address);
+                }
+            }
+
+            System.out.println("[" + LocalDateTime.now() + "]: Adjacent list processed.");
+            System.out.println("Adjacent ID's: " + adjacentIDs);
+            System.out.println("Adjacent IP's: " + adjacentIPs);
         }
-        catch (Exception e)
+        catch (IOException e)
         {
-            adjacents.clear();
-            e.printStackTrace();
+            System.err.println("[" + LocalDateTime.now() + "]: Error reading adjacent info from server.");
         }
 
-        return adjacents;
+        return new Triplet<>(myID, adjacentIDs, adjacentIPs);
     }
 }

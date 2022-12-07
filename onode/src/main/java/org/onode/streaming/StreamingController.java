@@ -7,6 +7,8 @@ import java.net.*;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class StreamingController implements Runnable
 {
@@ -14,16 +16,24 @@ public class StreamingController implements Runnable
     private final Set<String> toBeAdded;
     private final Set<String> toBeRemoved;
     private final AtomicBoolean isLast;
+    private final AtomicBoolean isStreaming;
     private final DatagramSocket socket;
     private final int BUFFER_SIZE = 15000;
 
+    private final Lock addressLock;
+    private String lastSenderAddress;
+
     public StreamingController() throws SocketException
     {
+
         this.addressesToSend = new HashSet<>();
         this.toBeAdded = Collections.synchronizedSet(new HashSet<>());
         this.toBeRemoved = Collections.synchronizedSet(new HashSet<>());
         this.socket = new DatagramSocket(Main.STREAMING_PORT_EXTERNAL);
-        isLast = new AtomicBoolean(false);
+        this.isLast = new AtomicBoolean(false);
+        this.isStreaming = new AtomicBoolean(false);
+        this.addressLock = new ReentrantLock();
+        this.lastSenderAddress = null;
     }
 
     @Override
@@ -38,11 +48,20 @@ public class StreamingController implements Runnable
                 try
                 {
                     this.socket.receive(rcvPacket);
+                    this.isStreaming.set(true);
+                    String senderAddress = rcvPacket.getAddress().getHostAddress();
+                    if(!senderAddress.equals(lastSenderAddress))
+                        synchronized (this.addressLock)
+                        {
+                            this.lastSenderAddress = senderAddress;
+                        }
                 }
                 catch (IOException e)
                 {
                     System.err.println("[" + LocalDateTime.now() + "]: Error receiving datagram packet.");
+                    this.isStreaming.set(false);
                 }
+
 
                 int lenghtReceived = rcvPacket.getLength();
                 for (String address : this.addressesToSend) {
@@ -55,13 +74,16 @@ public class StreamingController implements Runnable
 
                         DatagramPacket sendPacket = new DatagramPacket(buffer, lenghtReceived, InetAddress.getByName(address), PORT);
                         this.socket.send(sendPacket);
-                        System.out.println("[" + LocalDateTime.now() + "]: Sent streaming packet to [" + address + "].");
+                        // System.out.println("[" + LocalDateTime.now() + "]: Sent streaming packet to [" + address + "].");
                     }
                     catch (IOException e) {
                         System.err.println("[" + LocalDateTime.now() + "]: Error sending datagram packet to host [" + address + "]");
                     }
                 }
             }
+            else
+                this.isStreaming.set(false);
+
             this.updateAddresses();
         }
     }
@@ -107,5 +129,13 @@ public class StreamingController implements Runnable
             this.toBeRemoved.add(removeAddress);
         }
         return this.isLast.get();
+    }
+
+    public String isStreaming()
+    {
+        synchronized (this.addressLock)
+        {
+            return this.isStreaming.get() ? this.lastSenderAddress : null;
+        }
     }
 }

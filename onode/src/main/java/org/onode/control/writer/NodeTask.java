@@ -51,6 +51,7 @@ public class NodeTask implements Runnable
             String serverID = floodPacket.getServerID();
             int jumps = floodPacket.getJumps();
             long serverTimestamp = floodPacket.getServerTimestamp();
+            int floodID = floodPacket.getFloodID();
             List<String> nodeIDRoute = floodPacket.getNodeIDRoute();
 
             // Add our node ID.
@@ -68,14 +69,14 @@ public class NodeTask implements Runnable
                         new Triplet<>(
                                 NodeController.OP_CHANGE_STATE,
                                 Collections.singletonList(this.address),
-                                Arrays.asList(serverID, jumps, elapsedTime, nodeIDRoute)
+                                Arrays.asList(serverID, jumps, elapsedTime, floodID, nodeIDRoute)
                                 ));
 
             // Increment jumps (even if the server is on the same container as the node, it counts as a jump).
             jumps++;
 
             // Create packet
-            String payload = NodePacketFlood.createFloodPacket(serverID, jumps, serverTimestamp, nodeIDRoute);
+            String payload = NodePacketFlood.createFloodPacket(serverID, jumps, serverTimestamp, floodID, nodeIDRoute);
 
             // Get list of nodes to send inside payload
             List<String> nodesToSend = new ArrayList<>();
@@ -139,6 +140,24 @@ public class NodeTask implements Runnable
         }
     }
 
+    private void update()
+    {
+        try {
+            this.dataQueue.put(
+                    new Triplet<>(
+                            NodeController.OP_UPDATE_STREAM,
+                            null,
+                            null
+                    )
+            );
+        }
+        catch (InterruptedException e)
+        {
+            System.err.println("[" + LocalDateTime.now() + "]: Failed to insert update stream data into queue for host [" + this.address + "].");
+        }
+
+    }
+
     @Override
     public void run() 
     {
@@ -153,6 +172,8 @@ public class NodeTask implements Runnable
                     this.activate(new NodePacketGeneric(this.data));
                 else if (packetID == INodePacket.DEACTIVATE_PACKET_ID)
                     this.deactivate(new NodePacketGeneric(this.data));
+                else if(packetID == INodePacket.UPDATE_PACKET_ID)
+                    this.update();
 
                 // TODO: More packets... (maybe use switch)
             }

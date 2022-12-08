@@ -29,7 +29,7 @@ public class NodeState
                 Pair<String, List<Object>> floodInfo_2)
         {
             // Get data
-            // (String)serverID, (int)jumps, (long)elapsedTime, (List<String>)route
+            // (String)serverID, (int)jumps, (long)elapsedTime, (int)floodID, (List<String>)route
             int jumps_1 = (int) floodInfo_1.second().get(1);
             int jumps_2 = (int) floodInfo_2.second().get(1);
 
@@ -47,8 +47,7 @@ public class NodeState
         }
     }
 
-    // [pair (address "pai", [(String)serverID, (int)jumps, (long)elapsedTime, (List<String>)route])]
-    // Sorted by fastest!
+    // [pair (address "pai", [(String)serverID, (int)jumps, (long)elapsedTime, (int)floodID, (List<String>)route])]
     private final List<Pair<String, List<Object>>> streamingState;
     
     public NodeState()
@@ -63,13 +62,13 @@ public class NodeState
         if(floodInfo.second() instanceof List<?>)
         {
             List<Object> data = (List<Object>) floodInfo.second();
-            if(data.size() == 4)
+            if(data.size() == 5)
             {
-                if(data.get(3) instanceof List<?>)
+                if(data.get(4) instanceof List<?>)
                 {
-                    int idxToRemove = this.getPositionOfAddress(address);
-                    if(idxToRemove > 0 && idxToRemove < this.streamingState.size())
-                        this.streamingState.remove(idxToRemove);
+                    // Remove old flood info (of given server ID and floodID).
+                    this.removeOldFloodInfo((String) data.get(0), (int) data.get(3));
+
                     this.streamingState.add(new Pair<>(address, data));
                     this.streamingState.sort(new NodeStateComparator());
                 }
@@ -83,11 +82,21 @@ public class NodeState
             throw new UpdateNodeStateException("[" + LocalDateTime.now() + "]: Object not of type List<?> (origin at [" + address + "])");
     }
 
-    private int getPositionOfAddress(String addressToFind)
+    private void removeOldFloodInfo(String serverID, int floodID)
     {
-        for(int i = 0; i < this.streamingState.size(); ++i)
-            if(this.streamingState.get(i).first().equals(addressToFind)) return i;
-        return -1;
+        List<Pair<String, List<Object>>> toRemove = new ArrayList<>();
+        for (Pair<String, List<Object>> stringListPair : this.streamingState)
+        {
+            // [(String)serverID, (int)jumps, (long)elapsedTime, (int)floodID, (List<String>)route]
+            List<Object> data = stringListPair.second();
+            String i_serverID = (String) data.get(0);
+            int i_floodID = (int) data.get(3);
+            if (serverID.equals(i_serverID) && floodID > i_floodID)
+                toRemove.add(stringListPair);
+        }
+
+        this.streamingState.removeAll(toRemove);
+        toRemove.clear();
     }
 
     public String getBestToReceive()

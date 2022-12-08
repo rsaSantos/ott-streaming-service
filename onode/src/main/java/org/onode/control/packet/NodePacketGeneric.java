@@ -12,7 +12,7 @@ public class NodePacketGeneric implements INodePacket
     {
         String[] splited = payload.split(ARG_SEP);
         this.ID = Integer.parseInt(splited[0]);
-        if ((this.ID == ACTIVATE_PACKET_ID || this.ID == DEACTIVATE_PACKET_ID) && splited.length == 2)
+        if ((this.ID == ACTIVATE_PACKET_ID || this.ID == DEACTIVATE_PACKET_ID || this.ID == UPDATE_PACKET_ID) && splited.length == 2)
             this.data = splited[1];
         else
             throw new PacketFormatException("Wrong generic packet format!");
@@ -31,5 +31,10 @@ public class NodePacketGeneric implements INodePacket
     public static String createDeactivatePacket(String addressToDeactivate)
     {
         return DEACTIVATE_PACKET_ID + ARG_SEP + addressToDeactivate;
+    }
+
+    public static String createUpdatePacket()
+    {
+        return UPDATE_PACKET_ID + ARG_SEP;
     }
 }

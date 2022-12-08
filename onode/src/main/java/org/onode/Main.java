@@ -119,7 +119,7 @@ public class Main
             System.out.println("[" + LocalDateTime.now() + "]: Terminating connection with server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m]...");
             socket.close();
             System.out.println("[" + LocalDateTime.now() + "]: Connection with server [\u001B[32m" + BOOTSTRAPPER_IP + "\u001B[0m] successfully terminated.");
-            
+
 
             // -------------------------------------------------
             // -------------------------------------------------

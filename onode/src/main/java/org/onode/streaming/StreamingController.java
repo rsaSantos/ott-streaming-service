@@ -1,6 +1,7 @@
 package org.onode.streaming;
 
 import org.onode.Main;
+import org.onode.utils.Pair;
 
 import java.io.IOException;
 import java.net.*;
@@ -13,9 +14,6 @@ import java.util.concurrent.locks.ReentrantLock;
 public class StreamingController implements Runnable
 {
     private final Set<String> addressesToSend;
-    private final Set<String> toBeAdded;
-    private final Set<String> toBeRemoved;
-    private final AtomicBoolean isLast;
     private final AtomicBoolean isStreaming;
     private final DatagramSocket socket;
     private final int BUFFER_SIZE = 15000;
@@ -26,11 +24,9 @@ public class StreamingController implements Runnable
     public StreamingController() throws SocketException
     {
 
-        this.addressesToSend = new HashSet<>();
-        this.toBeAdded = Collections.synchronizedSet(new HashSet<>());
-        this.toBeRemoved = Collections.synchronizedSet(new HashSet<>());
+        this.addressesToSend = Collections.synchronizedSet(new HashSet<>());
         this.socket = new DatagramSocket(Main.STREAMING_PORT_EXTERNAL);
-        this.isLast = new AtomicBoolean(false);
+        this.socket.setSoTimeout(5000);
         this.isStreaming = new AtomicBoolean(false);
         this.addressLock = new ReentrantLock();
         this.lastSenderAddress = null;
@@ -39,9 +35,17 @@ public class StreamingController implements Runnable
     @Override
     public void run()
     {
+        int printCounter = 0;
+
         while(true)
         {
-            if(!this.addressesToSend.isEmpty())
+            boolean someoneToSend;
+            synchronized (this.addressesToSend)
+            {
+                someoneToSend = !this.addressesToSend.isEmpty();
+            }
+
+            if(someoneToSend)
             {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 DatagramPacket rcvPacket = new DatagramPacket(buffer, buffer.length);
@@ -56,86 +60,68 @@ public class StreamingController implements Runnable
                             this.lastSenderAddress = senderAddress;
                         }
                 }
+                catch (SocketTimeoutException e)
+                {
+                    System.err.println("[" + LocalDateTime.now() + "]: Socket timeout.");
+                    this.isStreaming.set(false);
+                }
                 catch (IOException e)
                 {
                     System.err.println("[" + LocalDateTime.now() + "]: Error receiving datagram packet.");
                     this.isStreaming.set(false);
                 }
 
-
                 int lenghtReceived = rcvPacket.getLength();
-                for (String address : this.addressesToSend) {
-                    // Send packet
-                    try
-                    {
-                        int PORT = Main.STREAMING_PORT_EXTERNAL;
-                        if(address.equals("localhost"))
-                            PORT = Main.STREAMING_PORT_LOCALHOST;
+                synchronized (this.addressesToSend)
+                {
+                    for (String address : this.addressesToSend) {
+                        // Send packet
+                        try
+                        {
+                            int PORT = Main.STREAMING_PORT_EXTERNAL;
+                            if(address.equals("localhost"))
+                                PORT = Main.STREAMING_PORT_LOCALHOST;
 
-                        DatagramPacket sendPacket = new DatagramPacket(buffer, lenghtReceived, InetAddress.getByName(address), PORT);
-                        this.socket.send(sendPacket);
-                        // System.out.println("[" + LocalDateTime.now() + "]: Sent streaming packet to [" + address + "].");
-                    }
-                    catch (IOException e) {
-                        System.err.println("[" + LocalDateTime.now() + "]: Error sending datagram packet to host [" + address + "]");
+                            DatagramPacket sendPacket = new DatagramPacket(buffer, lenghtReceived, InetAddress.getByName(address), PORT);
+                            this.socket.send(sendPacket);
+
+                            if(printCounter % 25 == 0)
+                                System.out.println("[" + LocalDateTime.now() + "]: Sent streaming packet to [" + address + "].");
+                            printCounter++;
+                        }
+                        catch (IOException e) {
+                            System.err.println("[" + LocalDateTime.now() + "]: Error sending datagram packet to host [" + address + "]");
+                        }
                     }
                 }
             }
             else
                 this.isStreaming.set(false);
-
-            this.updateAddresses();
         }
     }
-
-    private void updateAddresses()
-    {
-        // Add new addresses to send
-        synchronized (this.toBeAdded)
-        {
-            if(!this.toBeAdded.isEmpty())
-            {
-                this.addressesToSend.addAll(this.toBeAdded);
-                this.toBeAdded.clear();
-            }
-        }
-
-        // Remove addresses
-        synchronized (this.toBeRemoved)
-        {
-            if(!this.toBeRemoved.isEmpty())
-            {
-                this.addressesToSend.removeAll(this.toBeRemoved);
-                this.toBeRemoved.clear();
-            }
-        }
-
-        this.isLast.set(this.addressesToSend.size() == 1);
-    }
-
 
     public void add(String newAddress)
     {
-        synchronized (this.toBeAdded)
+        synchronized (this.addressesToSend)
         {
-            this.toBeAdded.add(newAddress);
+            this.addressesToSend.add(newAddress);
         }
     }
 
-    public boolean remove(String removeAddress)
+    public int remove(String removeAddress)
     {
-        synchronized (this.toBeRemoved)
+        synchronized (this.addressesToSend)
         {
-            this.toBeRemoved.add(removeAddress);
+            this.addressesToSend.remove(removeAddress);
+            return this.addressesToSend.size();
         }
-        return this.isLast.get();
     }
 
-    public String isStreaming()
+    public Pair<Boolean,String> isStreaming()
     {
         synchronized (this.addressLock)
         {
-            return this.isStreaming.get() ? this.lastSenderAddress : null;
+            return new Pair<>(this.isStreaming.get(), this.lastSenderAddress);
         }
     }
 }

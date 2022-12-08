@@ -13,7 +13,7 @@ public class StreamingClient implements Runnable
     //GUI
     //----
     private final JFrame jFrame;
-    private final JButton setupButton;
+    private final JButton refreshButton;
     private final JButton playButton;
     private final JButton pauseButton;
     private final JButton tearButton;
@@ -42,7 +42,7 @@ public class StreamingClient implements Runnable
         this.nodeAddress = nodeAddress;
         this.STREAMING_PORT = STREAMING_PORT;
         this.jFrame = new JFrame("Cliente de Testes");
-        this.setupButton = new JButton("Setup");
+        this.refreshButton = new JButton("Refresh");
         this.playButton = new JButton("Play");
         this.pauseButton = new JButton("Pause");
         this.tearButton = new JButton("Teardown");
@@ -91,7 +91,7 @@ public class StreamingClient implements Runnable
 
         //Buttons
         buttonPanel.setLayout(new GridLayout(1,0));
-        buttonPanel.add(setupButton);
+        buttonPanel.add(refreshButton);
         buttonPanel.add(playButton);
         buttonPanel.add(pauseButton);
         buttonPanel.add(tearButton);
@@ -99,6 +99,8 @@ public class StreamingClient implements Runnable
         // handlers... (so dois)
         this.playButton.addActionListener(new playButtonListener());
         this.tearButton.addActionListener(new tearButtonListener());
+        this.refreshButton.addActionListener(new refreshButtonListener());
+
 
         //Image display label
         this.iconLabel.setIcon(null);
@@ -119,6 +121,29 @@ public class StreamingClient implements Runnable
     //------------------------------------
     //Handler for buttons
     //------------------------------------
+
+    //Handler for refresh button
+    //-----------------------
+    class refreshButtonListener implements ActionListener {
+        public void actionPerformed(ActionEvent e)
+        {
+            // Sending activate packet to node address
+            try {
+                Socket socket = new Socket(InetAddress.getByName(nodeAddress), Main.CONTROL_PORT);
+                DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                dos.writeUTF("4;");
+                dos.flush();
+                dos.close();
+                socket.close();
+            }
+            catch (IOException ex)
+            {
+                System.err.println("[" + LocalDateTime.now() + "]: Failed to send activation packet to node [" + nodeAddress + "].");
+            }
+
+            System.out.println("[" + LocalDateTime.now() + "]: Refresh Button pressed !");
+        }
+    }
 
     //Handler for Play button
     //-----------------------

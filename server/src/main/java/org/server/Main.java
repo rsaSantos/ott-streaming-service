@@ -63,26 +63,24 @@ public class Main {
 
         try
         {
-            // TODO: Wait for nodes...needed? Maybe...
             System.out.println("[" + LocalDateTime.now() + "]: Waiting 3 seconds...");
             Thread.sleep(3000);
             System.out.println("[" + LocalDateTime.now() + "]: Trying to connect with node 1...");
-
-            // Start flooding
-            start_flood(node_1_address, serverID);
 
             // Start stream
             String videoPath = "target/classes/movie.Mjpeg";
             if (Files.exists(Path.of(videoPath)))
             {
                 Streaming streaming = null;
+                int floodID = 0;
                 while(true)
                 {
                     if(streaming == null || !streaming.isStreamOn())
                     {
+                        start_flood(node_1_address, serverID, floodID);
+                        floodID++;
                         streaming = new Streaming(videoPath, node_1_address);
                         streaming.run();
-                        start_flood(node_1_address, serverID);
                     }
                 }
             }
@@ -98,12 +96,12 @@ public class Main {
         }
     }
 
-    private static void start_flood(String node_1_address, String serverID) throws IOException
+    private static void start_flood(String node_1_address, String serverID, int floodID) throws IOException
     {
         System.out.println("[" + LocalDateTime.now() + "]: Start flooding...");
         Socket socket = new Socket(node_1_address, CONTROL_PORT);
         DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-        String payload = "1;" + serverID + ";0;" + Instant.now().toEpochMilli() + ";,";
+        String payload = "1;" + serverID + ";0;" + Instant.now().toEpochMilli() + ";" + floodID + ";,";
         dos.writeUTF(payload);
         dos.flush();
         dos.close();
@@ -147,7 +145,6 @@ public class Main {
                     criticalNodes--;
             }
 
-            // TODO (EXTRA): CRITICAL VS NON-CRITICAL NODES
             List<Pair<Boolean, DataInputStream>> inputStreams = new ArrayList<>();
             for(Pair<Socket, DataOutputStream> node : connectedNodes)
             {

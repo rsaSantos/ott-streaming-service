@@ -62,15 +62,12 @@ public class NodeTask implements Runnable
 
             // Create update state request
             // jumps, timestamp, elapsedTime, route
-            // Do not create this entry if the size of the routeAddresses list is 1.
-            //  This means that the server is our parent "node".
-            if(nodeIDRoute.size() > 1)
-                this.dataQueue.put(
-                        new Triplet<>(
-                                NodeController.OP_CHANGE_STATE,
-                                Collections.singletonList(this.address),
-                                Arrays.asList(serverID, jumps, elapsedTime, floodID, nodeIDRoute)
-                                ));
+            this.dataQueue.put(
+                    new Triplet<>(
+                            NodeController.OP_CHANGE_STATE,
+                            Collections.singletonList(this.address),
+                            Arrays.asList(serverID, jumps, elapsedTime, floodID, nodeIDRoute)
+                    ));
 
             // Increment jumps (even if the server is on the same container as the node, it counts as a jump).
             jumps++;

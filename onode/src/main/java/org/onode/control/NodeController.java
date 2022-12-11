@@ -172,9 +172,12 @@ public class NodeController implements Runnable
                         Boolean isStreaming = streamingNodeInfo.first();
                         String streamingNode = streamingNodeInfo.second();
 
+                        List<Object> data = (List<Object>) dataTriplet.third();
+                        String serverID = (String) data.get(0);
 
                         System.out.println("-------------------");
-                        System.out.println("flood received from = " + addresses.get(0));
+                        System.out.println("ServerID=" + serverID);
+                        System.out.println("flood received from= " + addresses.get(0));
                         System.out.println("lastBestNodeToReceive=" + lastBestNodeToReceive);
                         System.out.println("currentBestToReceive=" + currentBestToReceive);
                         System.out.println("streamSenderAddress=" + streamingNode);

@@ -31,14 +31,15 @@ public class Main {
     {
         String serverID = null;
         String node_1_address = null;
-        boolean buildOverlay = true;
+        String configPath = null;
         if(args.length > 1)
         {
             serverID = args[0];
             node_1_address = args[1];
             if(args.length > 2)
-                buildOverlay = Boolean.parseBoolean(args[2]);
+                configPath = args[2];
 
+            boolean buildOverlay = configPath != null;
             System.out.println("[" + LocalDateTime.now() + "]: Node Address is [" + node_1_address + "]. Build overlay? " + buildOverlay);
         }
         else
@@ -58,8 +59,8 @@ public class Main {
             System.exit(1);
         }
 
-        if(buildOverlay)
-            buildOverlay(ss);
+        if(configPath != null)
+            buildOverlay(ss, configPath);
 
         try
         {
@@ -108,11 +109,11 @@ public class Main {
         socket.close();
     }
 
-    private static void buildOverlay(ServerSocket ss)
+    private static void buildOverlay(ServerSocket ss, String configPath)
     {
         // Read the configuration file.
         System.out.println("[" + LocalDateTime.now() + "]: Reading config file...");
-        Overlay overlay = new Overlay("target/classes/test_medium_config.json");
+        Overlay overlay = new Overlay(configPath);
         System.out.println("[" + LocalDateTime.now() + "]: Config file processed successfully!");
 
         // Get number of nodes: all and critical.

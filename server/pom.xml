@@ -46,7 +46,7 @@
                         <!--suppress UnresolvedMavenProperty -->
                         <argument>${nodeAddress}</argument>
                         <!--suppress UnresolvedMavenProperty -->
-                        <argument>${buildOverlay}</argument>
+                        <argument>${configPath}</argument>
                     </arguments>
                 </configuration>
             </plugin>

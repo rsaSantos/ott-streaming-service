@@ -3,7 +3,10 @@ Over the Top multimedia streaming service implemented in Java.
 
 Run commands
 
-server: su - core -c "export DISPLAY=:0.0 && cd server/ && mvn clean package -DserverID=1 -DnodeAddress=localhost -DbuildOverlay=true"
+server: 
+* su - core -c "export DISPLAY=:0.0 && cd server/ && mvn clean package -DserverID=S1 -DnodeAddress=localhost -DconfigPath=target/classes/test_2_servers.json"
+
+* su - core -c "export DISPLAY=:0.0 && cd server/ && mvn clean package -DserverID=S2 -DnodeAddress=10.0.3.1"
 
 onode: su - core -c "cd onode/ && mvn clean package"
 

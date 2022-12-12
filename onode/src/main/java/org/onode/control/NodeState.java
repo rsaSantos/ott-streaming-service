@@ -11,6 +11,14 @@ import java.util.List;
 
 public class NodeState
 {
+    private static final int OBJECT_LIST_SIZE = 6;
+    private static final int OBJECT_LIST_IDXofLIST = OBJECT_LIST_SIZE - 1;
+    private static final int SERVER_ID_IDX = 0;
+    private static final int JUMPS_IDX = 1;
+    private static final int ELAPSED_TIME_IDX = 2;
+    private static final int FLOOD_ID_IDX = 4;
+
+
     static class NodeStateComparator implements Comparator<Pair<String, List<Object>>>
     {
         private boolean equalsWithError(int compare, long val1, long val2)
@@ -29,12 +37,12 @@ public class NodeState
                 Pair<String, List<Object>> floodInfo_2)
         {
             // Get data
-            // (String)serverID, (int)jumps, (long)elapsedTime, (int)floodID, (List<String>)route
-            int jumps_1 = (int) floodInfo_1.second().get(1);
-            int jumps_2 = (int) floodInfo_2.second().get(1);
+            // (String)serverID, (int)jumps, (long)elapsedTime, (long)serverTimestamp (int)floodID, (List<String>)route
+            int jumps_1 = (int) floodInfo_1.second().get(JUMPS_IDX);
+            int jumps_2 = (int) floodInfo_2.second().get(JUMPS_IDX);
 
-            long elapsedTime_1 = (long) floodInfo_1.second().get(2);
-            long elapsedTime_2 = (long) floodInfo_2.second().get(2);
+            long elapsedTime_1 = (long) floodInfo_1.second().get(ELAPSED_TIME_IDX);
+            long elapsedTime_2 = (long) floodInfo_2.second().get(ELAPSED_TIME_IDX);
 
             int elapsedTimeCompare = Long.compare(elapsedTime_1, elapsedTime_2);
             boolean elapsedTimeRelation = equalsWithError(elapsedTimeCompare, elapsedTime_1, elapsedTime_2);
@@ -47,7 +55,7 @@ public class NodeState
         }
     }
 
-    // [pair (address "pai", [(String)serverID, (int)jumps, (long)elapsedTime, (int)floodID, (List<String>)route])]
+    // [pair (address "pai", [(String)serverID, (int)jumps, (long)elapsedTime, (long)serverTimestamp, (int)floodID, (List<String>)route])]
     private final List<Pair<String, List<Object>>> streamingState;
     
     public NodeState()
@@ -62,12 +70,12 @@ public class NodeState
         if(floodInfo.second() instanceof List<?>)
         {
             List<Object> data = (List<Object>) floodInfo.second();
-            if(data.size() == 5)
+            if(data.size() == OBJECT_LIST_SIZE)
             {
-                if(data.get(4) instanceof List<?>)
+                if(data.get(OBJECT_LIST_IDXofLIST) instanceof List<?>)
                 {
                     // Remove old flood info (of given server ID and floodID).
-                    this.removeOldFloodInfo((String) data.get(0), (int) data.get(3));
+                    this.removeOldFloodInfo((String) data.get(SERVER_ID_IDX), (int) data.get(FLOOD_ID_IDX));
 
                     this.streamingState.add(new Pair<>(address, data));
                     this.streamingState.sort(new NodeStateComparator());
@@ -89,8 +97,8 @@ public class NodeState
         {
             // [(String)serverID, (int)jumps, (long)elapsedTime, (int)floodID, (List<String>)route]
             List<Object> data = stringListPair.second();
-            String i_serverID = (String) data.get(0);
-            int i_floodID = (int) data.get(3);
+            String i_serverID = (String) data.get(SERVER_ID_IDX);
+            int i_floodID = (int) data.get(FLOOD_ID_IDX);
             if (serverID.equals(i_serverID) && floodID > i_floodID)
                 toRemove.add(stringListPair);
         }

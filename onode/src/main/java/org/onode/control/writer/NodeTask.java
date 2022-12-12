@@ -66,7 +66,7 @@ public class NodeTask implements Runnable
                     new Triplet<>(
                             NodeController.OP_CHANGE_STATE,
                             Collections.singletonList(this.address),
-                            Arrays.asList(serverID, jumps, elapsedTime, floodID, nodeIDRoute)
+                            Arrays.asList(serverID, jumps, elapsedTime, serverTimestamp, floodID, nodeIDRoute)
                     ));
 
             // Increment jumps (even if the server is on the same container as the node, it counts as a jump).

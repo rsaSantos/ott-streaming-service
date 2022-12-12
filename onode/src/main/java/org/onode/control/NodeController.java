@@ -27,7 +27,6 @@ public class NodeController implements Runnable
     public static final int OP_CHANGE_STATE = 2;
     public static final int OP_ACTIVATE_STREAM = 3;
     public static final int OP_DEACTIVATE_STREAM = 4;
-    public static final int OP_UPDATE_STREAM = 5;
     private final List<Pair<String, String>> adjacent_ID_IP;
     private final String myID;
     private final ServerSocket serverSocket;
@@ -183,6 +182,21 @@ public class NodeController implements Runnable
                         System.out.println("streamSenderAddress=" + streamingNode);
                         System.out.println("isStreaming? " + isStreaming);
                         System.out.println("-------------------");
+
+                        // Create activation/deactivation packets
+                        String activatePacket = NodePacketGeneric.createActivatePacket(IGNORE);
+                        String deactivatePacket = NodePacketGeneric.createDeactivatePacket(IGNORE);
+
+                        // There is a node sending stream, but there is no record of a best sending node.
+                        if(isStreaming && currentBestToReceive == null)
+                            System.err.println("[" + LocalDateTime.now() + "]: Receiving unrequested stream.");
+
+                        // There is a node sending stream, but it is not the best one.
+                        else if(isStreaming && !streamingNode.equals(currentBestToReceive))
+                        {
+                            this.writeDataTo(deactivatePacket, streamingNode);
+                            this.writeDataTo(activatePacket, currentBestToReceive);
+                        }
                     }
                     catch (UpdateNodeStateException e) {
                         System.err.println(e.getMessage());
@@ -195,13 +209,11 @@ public class NodeController implements Runnable
 
                     Pair<Boolean, String> streamingNodeInfo = streamingController.isStreaming();
                     Boolean isStreaming = streamingNodeInfo.first();
-                    String streamingNode = streamingNodeInfo.second();
 
                     String bestToReceive = nodeState.getBestToReceive();
 
                     // Create activation/deactivation packets
                     String activatePacket = NodePacketGeneric.createActivatePacket(IGNORE);
-                    String deactivatePacket = NodePacketGeneric.createDeactivatePacket(IGNORE);
 
                     System.out.println("ACTIVATE PACKET");
                     System.out.println("activate node = " + addresses.get(0));
@@ -213,23 +225,9 @@ public class NodeController implements Runnable
                     if(isStreaming && bestToReceive == null)
                         System.err.println("[" + LocalDateTime.now() + "]: Receiving unrequested stream.");
 
-                    // There is a node sending stream, but it is not the best one.
-                    else if(isStreaming && !streamingNode.equals(bestToReceive))
-                    {
-                        this.writeDataTo(deactivatePacket, streamingNode);
-                        this.writeDataTo(activatePacket, bestToReceive);
-                    }
-
                     // There is no node sending stream, activate the best node.
                     else if(!isStreaming && bestToReceive != null)
                         this.writeDataTo(activatePacket, bestToReceive);
-
-                    // There is a noda sending stream, and is the best node.
-                    // We will still replicate the packet (solvs the update route bug).
-                    else if(isStreaming)
-                        this.writeDataTo(activatePacket, bestToReceive);
-                    
-                    // else, we are either receiving the best stream or not receiving and still haven't the best parent.
                 }
                 else if (Objects.equals(operation, OP_DEACTIVATE_STREAM))
                 {
@@ -253,38 +251,6 @@ public class NodeController implements Runnable
 
                             // Send packet
                             this.writeDataTo(data, streamingNode);
-                    }
-                }
-                else if (Objects.equals(operation, OP_UPDATE_STREAM))
-                {
-                    Pair<Boolean, String> streamingNodeInfo = streamingController.isStreaming();
-                    Boolean isStreaming = streamingNodeInfo.first();
-                    String streamingNode = streamingNodeInfo.second();
-
-                    String bestToReceive = nodeState.getBestToReceive();
-                    if(bestToReceive != null)
-                    {
-                        if(isStreaming && !streamingNode.equals(bestToReceive))
-                        {
-                            // Create activation/deactivation packets
-                            String activatePacket = NodePacketGeneric.createActivatePacket(IGNORE);
-                            String deactivatePacket = NodePacketGeneric.createDeactivatePacket(IGNORE);
-
-                            System.out.println("ACTIVATE PACKET");
-                            System.out.println("streaming node = " + streamingNodeInfo.second());
-                            System.out.println("IsStreaming? " + streamingNodeInfo.first());
-                            System.out.println("best to receive = " + bestToReceive);
-
-                            System.out.println("UPDATE RESULTED IN ACTIVATE/DEACTIVATE");
-
-                            this.writeDataTo(deactivatePacket, streamingNode);
-                            this.writeDataTo(activatePacket, bestToReceive);
-                        }
-                        else
-                        {
-                            System.out.println("NOTHING TO UPDATE, SEND UPDATE PACKET TO " + bestToReceive);
-                            this.writeDataTo(NodePacketGeneric.createUpdatePacket(), bestToReceive);
-                        }
                     }
                 }
             }

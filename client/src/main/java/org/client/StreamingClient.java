@@ -123,6 +123,7 @@ public class StreamingClient implements Runnable
     //------------------------------------
 
     //Handler for refresh button
+    // (disabled on latest version)
     //-----------------------
     class refreshButtonListener implements ActionListener {
         public void actionPerformed(ActionEvent e)

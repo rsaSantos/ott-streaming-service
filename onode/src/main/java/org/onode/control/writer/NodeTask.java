@@ -137,24 +137,6 @@ public class NodeTask implements Runnable
         }
     }
 
-    private void update()
-    {
-        try {
-            this.dataQueue.put(
-                    new Triplet<>(
-                            NodeController.OP_UPDATE_STREAM,
-                            null,
-                            null
-                    )
-            );
-        }
-        catch (InterruptedException e)
-        {
-            System.err.println("[" + LocalDateTime.now() + "]: Failed to insert update stream data into queue for host [" + this.address + "].");
-        }
-
-    }
-
     @Override
     public void run() 
     {
@@ -169,10 +151,8 @@ public class NodeTask implements Runnable
                     this.activate(new NodePacketGeneric(this.data));
                 else if (packetID == INodePacket.DEACTIVATE_PACKET_ID)
                     this.deactivate(new NodePacketGeneric(this.data));
-                else if(packetID == INodePacket.UPDATE_PACKET_ID)
-                    this.update();
-
-                // TODO: More packets... (maybe use switch)
+                else
+                    System.err.println("[" + LocalDateTime.now() + "]: Invalid packet ID (received from host [" + this.address + "]).");
             }
             catch (PacketFormatException e)
             {

@@ -100,6 +100,7 @@ public class StreamingClient implements Runnable
         this.playButton.addActionListener(new playButtonListener());
         this.tearButton.addActionListener(new tearButtonListener());
         this.refreshButton.addActionListener(new refreshButtonListener());
+        this.pauseButton.addActionListener(new pauseButtonListener());
 
 
         //Image display label
@@ -143,6 +144,29 @@ public class StreamingClient implements Runnable
             }
 
             System.out.println("[" + LocalDateTime.now() + "]: Refresh Button pressed !");
+        }
+    }
+
+    //Handler for pause button
+    //-----------------------
+    class pauseButtonListener implements ActionListener {
+        public void actionPerformed(ActionEvent e)
+        {
+            // Sending activate packet to node address
+            try {
+                Socket socket = new Socket(InetAddress.getByName(nodeAddress), Main.CONTROL_PORT);
+                DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                dos.writeUTF("3;" + myAddress);
+                dos.flush();
+                dos.close();
+                socket.close();
+            }
+            catch (IOException ex)
+            {
+                System.err.println("[" + LocalDateTime.now() + "]: Failed to send deactivation packet to node [" + nodeAddress + "].");
+            }
+            cTimer.stop();
+            System.out.println("[" + LocalDateTime.now() + "]: Pause Button pressed !");
         }
     }
 

@@ -1,5 +1,13 @@
 [
     {
+        "ID": "O1",
+        "Critical": true,
+        "Origin": [
+            "i0:10.0.20.10"
+        ],
+        "Neighbours": ["O2:i0"]
+    },
+    {
         "ID": "O2",
         "Critical": true,
         "Origin": [

@@ -345,7 +345,6 @@ public class NodeController implements Runnable
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try
             {
-                // TODO: later coordinate this shutdown
                 this.threadPoolExecutor.shutdown();
 
                 synchronized (this.connectionDataMap)
